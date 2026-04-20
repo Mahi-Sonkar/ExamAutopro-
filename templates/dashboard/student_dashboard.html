@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-user-graduate me-2"></i>Student Dashboard</h1>
+    <div>
+        <a href="{% url 'exam_list' %}" class="btn btn-primary me-2">
+            <i class="fas fa-list me-2"></i>Browse Exams
+        </a>
+        <a href="{% url 'logout' %}" class="btn btn-danger">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.total_attempts }}</h4>
+                        <p class="card-text">Total Attempts</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-edit fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.completed_exams }}</h4>
+                        <p class="card-text">Completed</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.in_progress_exams }}</h4>
+                        <p class="card-text">In Progress</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-hourglass-half fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.avg_percentage }}%</h4>
+                        <p class="card-text">Average Score</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Available Exams and Recent Results -->
+<div class="row">
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="fas fa-file-alt me-2"></i>Available Exams</h5>
+                <a href="{% url 'exam_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if available_exams %}
+                    <div class="list-group">
+                        {% for exam in available_exams %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ exam.title }}</h6>
+                                        <p class="mb-1 text-muted">{{ exam.description|truncatewords:20 }}</p>
+                                        <div class="d-flex gap-3 small text-muted">
+                                            <span><i class="fas fa-clock me-1"></i>{{ exam.duration }} min</span>
+                                            <span><i class="fas fa-trophy me-1"></i>{{ exam.total_marks }} marks</span>
+                                            <span><i class="fas fa-question-circle me-1"></i>{{ exam.total_questions }} questions</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if exam.is_active %}
+                                            <a href="{% url 'take_exam' exam.id %}" class="btn btn-primary">
+                                                <i class="fas fa-play me-1"></i>Start Exam
+                                            </a>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Active</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5>No Available Exams</h5>
+                        <p class="text-muted">Check back later for new exams.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-history me-2"></i>Recent Results</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_results %}
+                    <div class="list-group list-group-flush">
+                        {% for result in recent_results %}
+                            <div class="list-group-item px-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ result.exam.title }}</h6>
+                                        <small class="text-muted">{{ result.submitted_at|date:"M d, Y" }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold">{{ result.percentage }}%</div>
+                                        <small class="text-muted">{{ result.total_marks_obtained }}/{{ result.exam.total_marks }}</small>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 6px;">
+                                    <div class="progress-bar bg-{{ result.percentage|yesno:'success,warning,danger,success' }}" 
+                                         style="width: {{ result.percentage }}%"></div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="#" class="btn btn-sm btn-outline-primary">View All Results</a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No results yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Exams -->
+{% if upcoming_exams %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>Upcoming Exams
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for exam in upcoming_exams %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ exam.title }}</h6>
+                                    <p class="card-text text-muted">{{ exam.description|truncatewords:15 }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ exam.start_time|date:"M d, H:i" }}
+                                        </small>
+                                        <span class="badge bg-info">{{ exam.get_exam_type_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- In Progress Exams -->
+{% if stats.in_progress_exams > 0 %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-hourglass-half me-2"></i>Exams In Progress ({{ stats.in_progress_exams }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You have {{ stats.in_progress_exams }} exam(s) in progress. Complete them before the deadline.
+                </div>
+                <a href="#" class="btn btn-warning">
+                    <i class="fas fa-play me-2"></i>Continue Exams
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 60 seconds
+    setInterval(function() {
+        location.reload();
+    }, 60000);
+</script>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}Create/Edit Exam - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Professional Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-3">
+                        <i class="fas fa-plus-circle text-primary me-3"></i>
+                        {% if object %}Edit{% else %}Create New{% endif %} Exam
+                    </h1>
+                    <p class="text-muted fs-5 mb-0">Set up exam details including schedule and total marks</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional Exam Creation Form -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-edit me-2"></i>Exam Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <!-- Basic Information Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="fw-bold mb-3 text-primary">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-8 mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label fw-bold">Exam Title</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">{{ form.title.errors|first }}</div>
+                        {% endif %}
+                        <div class="form-text">Example: "Final Exam - Computer Science" or "Midterm 2024"</div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.exam_type.id_for_label }}" class="form-label fw-bold">Exam Type</label>
+                        {{ form.exam_type }}
+                        {% if form.exam_type.errors %}
+                            <div class="invalid-feedback d-block">{{ form.exam_type.errors|first }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Exam Schedule Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="fw-bold mb-3 text-primary">
+                            <i class="fas fa-calendar-alt me-2"></i>Exam Schedule
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.start_time.id_for_label }}" class="form-label fw-bold">Start Date & Time</label>
+                        {{ form.start_time }}
+                        {% if form.start_time.errors %}
+                            <div class="invalid-feedback d-block">{{ form.start_time.errors|first }}</div>
+                        {% endif %}
+                        <div class="form-text">When students can start taking the exam</div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label fw-bold">End Date & Time</label>
+                        {{ form.end_time }}
+                        {% if form.end_time.errors %}
+                            <div class="invalid-feedback d-block">{{ form.end_time.errors|first }}</div>
+                        {% endif %}
+                        <div class="form-text">When the exam will automatically end</div>
+                    </div>
+                </div>
+
+                <!-- Exam Configuration Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="fw-bold mb-3 text-primary">
+                            <i class="fas fa-cog me-2"></i>Exam Configuration
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.duration.id_for_label }}" class="form-label fw-bold">Duration (minutes)</label>
+                        {{ form.duration }}
+                        {% if form.duration.errors %}
+                            <div class="invalid-feedback d-block">{{ form.duration.errors|first }}</div>
+                        {% endif %}
+                        <div class="form-text">How long students have to complete the exam</div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.total_marks.id_for_label }}" class="form-label fw-bold">Total Marks</label>
+                        {{ form.total_marks }}
+                        {% if form.total_marks.errors %}
+                            <div class="invalid-feedback d-block">{{ form.total_marks.errors|first }}</div>
+                        {% endif %}
+                        <div class="form-text">Maximum possible score for this exam</div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Exam Duration Preview</label>
+                        <div class="form-control form-control-lg bg-light">
+                            <span id="duration-preview">--</span>
+                        </div>
+                        <div class="form-text">Calculated duration display</div>
+                    </div>
+                </div>
+
+                <!-- Quick Tips Section -->
+                <div class="alert alert-info border-0 bg-light">
+                    <h6 class="alert-heading fw-bold">
+                        <i class="fas fa-lightbulb me-2"></i>Quick Tips
+                    </h6>
+                    <ul class="mb-0">
+                        <li>Set start time to allow students to begin the exam</li>
+                        <li>Set end time to automatically close the exam</li>
+                        <li>Duration is the time limit for each student</li>
+                        <li>Total marks will be used for percentage calculations</li>
+                        <li>You can add questions and more settings after creating the exam</li>
+                    </ul>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between align-items-center mt-5">
+                    <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <div>
+                        <button type="reset" class="btn btn-outline-warning btn-lg me-2">
+                            <i class="fas fa-redo me-2"></i>Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Update Exam{% else %}Create Exam{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Duration Preview Calculator
+document.addEventListener('DOMContentLoaded', function() {
+    const durationInput = document.querySelector('input[name="duration"]');
+    const durationPreview = document.getElementById('duration-preview');
+    
+    function updateDurationPreview() {
+        const duration = parseInt(durationInput.value) || 0;
+        if (duration > 0) {
+            const hours = Math.floor(duration / 60);
+            const minutes = duration % 60;
+            
+            let display = '';
+            if (hours > 0) {
+                display += `${hours} hour${hours > 1 ? 's' : ''}`;
+            }
+            if (minutes > 0) {
+                if (display) display += ' ';
+                display += `${minutes} minute${minutes > 1 ? 's' : ''}`;
+            }
+            
+            durationPreview.textContent = display || '0 minutes';
+        } else {
+            durationPreview.textContent = '--';
+        }
+    }
+    
+    // Update preview on input change
+    durationInput.addEventListener('input', updateDurationPreview);
+    
+    // Initialize preview
+    updateDurationPreview();
+    
+    // Set default values for datetime inputs if empty
+    const startTimeInput = document.querySelector('input[name="start_time"]');
+    const endTimeInput = document.querySelector('input[name="end_time"]');
+    
+    if (!startTimeInput.value) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        startTimeInput.value = now.toISOString().slice(0, 16);
+    }
+    
+    if (!endTimeInput.value) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
+        endTimeInput.value = tomorrow.toISOString().slice(0, 16);
+    }
+    
+    // Validate end time is after start time
+    function validateDateTime() {
+        const startTime = new Date(startTimeInput.value);
+        const endTime = new Date(endTimeInput.value);
+        
+        if (endTime <= startTime) {
+            endTimeInput.setCustomValidity('End time must be after start time');
+        } else {
+            endTimeInput.setCustomValidity('');
+        }
+    }
+    
+    startTimeInput.addEventListener('change', validateDateTime);
+    endTimeInput.addEventListener('change', validateDateTime);
+});
+</script>
+{% endblock %}

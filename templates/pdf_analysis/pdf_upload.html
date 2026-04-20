@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload PDF - ExamAutoPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .file-upload-area input[type="file"] {
+        display: none;
+    }
+    
+    .file-upload-area {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .file-upload-area:hover {
+        border-color: #007bff !important;
+        background-color: #e7f3ff !important;
+    }
+    
+    .file-upload-area.dragover {
+        border-color: #007bff !important;
+        background-color: #e7f3ff !important;
+    }
+    
+    .upload-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .file-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    
+    .result-container {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-file-pdf fa-2x text-danger me-3"></i>
+                        <div>
+                            <h4 class="mb-0">Upload PDF Document</h4>
+                            <p class="text-muted mb-0">Upload a PDF for AI-powered analysis</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" id="pdf-upload-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label">
+                                        <i class="fas fa-heading me-1"></i>Document Title *
+                                    </label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.title.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.document_type.id_for_label }}" class="form-label">
+                                        <i class="fas fa-tag me-1"></i>Document Type *
+                                    </label>
+                                    {{ form.document_type }}
+                                    {% if form.document_type.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.document_type.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.description.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.pdf_file.id_for_label }}" class="form-label">
+                                <i class="fas fa-file-upload me-1"></i>PDF File *
+                            </label>
+                            <div class="file-upload-area" id="file-upload-area">
+                                <div class="text-center p-4 border-2 border-dashed rounded-3" 
+                                     style="border-color: #dee2e6; background-color: #f8f9fa;" id="upload-content">
+                                    <div id="upload-prompt">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">Drop PDF file here or click to browse</h5>
+                                        <p class="text-muted small">Maximum file size: 50MB | Supported format: PDF</p>
+                                    </div>
+                                    <div id="file-info" style="display: none;">
+                                        <!-- File details will be shown here -->
+                                    </div>
+                                    {{ form.pdf_file }}
+                                </div>
+                            </div>
+                            {% if form.pdf_file.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.pdf_file.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>What happens after upload?</strong><br>
+                            1. AI extracts text from your PDF using OCR technology<br>
+                            2. Natural Language Processing analyzes the content<br>
+                            3. Questions are automatically detected and categorized<br>
+                            4. Comprehensive analysis report is generated
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-upload me-2"></i>Upload PDF
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Container -->
+<div class="result-container" id="results-container">
+    <!-- Results will be shown here -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileUploadArea = document.getElementById('file-upload-area');
+    const fileInput = document.querySelector('input[type="file"]');
+    const uploadForm = document.getElementById('pdf-upload-form');
+    const resultsContainer = document.getElementById('results-container');
+    const resultContainer = document.querySelector('.result-container');
+    let uploadedFile = null;
+
+    function updateFileDisplay(file) {
+        uploadedFile = file;
+        document.getElementById('upload-prompt').style.display = 'none';
+        document.getElementById('file-info').innerHTML = `
+            <i class="fas fa-file-pdf text-success me-2"></i>
+            <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
+        `;
+        document.getElementById('file-info').style.display = 'block';
+        evaluatePdfBtn.style.display = 'inline-block';
+        startAnalysisBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Re-analyze';
+    }
+
+    // File select/open
+    fileUploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                updateFileDisplay(file);
+            } else {
+                alert('Please upload a valid PDF file.');
+                fileInput.value = '';
+            }
+        }
+    });
+
+    // Drag/drop support
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+    });
+
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+    });
+
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                fileInput.files = files;
+                updateFileDisplay(file);
+            } else {
+                alert('Please upload a valid PDF file.');
+            }
+        }
+    });
+
+    // Prevent browser from opening dropped file outside drop zone
+    window.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    window.addEventListener('drop', function(e) {
+        e.preventDefault();
+    });
+
+    // Start analysis: submit upload form for backend processing
+    startAnalysisBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (!uploadedFile) {
+            alert('Please select a PDF file first');
+            return;
+        }
+
+        analysisProgress.style.display = 'block';
+        startAnalysisBtn.style.display = 'none';
+        evaluatePdfBtn.style.display = 'none';
+        resultContainer.style.display = 'none';
+        uploadModal.show();
+        uploadForm.submit();
+    });
+
+    evaluatePdfBtn.addEventListener('click', function() {
+        if (!uploadedFile) {
+            alert('Please select a PDF file first');
+            return;
+        }
+        evaluateWithAI(uploadedFile);
+    });
+    
+    // Function to evaluate with AI
+    function evaluateWithAI(file) {
+        // Show loading state
+        evaluatePdfBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+        evaluatePdfBtn.disabled = true;
+        resultContainer.style.display = 'none';
+        
+        // Create FormData for API call
+        const formData = new FormData();
+        formData.append('file', file);
+        // Make API call to evaluate PDF
+        fetch('/core/api/evaluate-pdf/', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading state
+            evaluatePdfBtn.innerHTML = '<i class="fas fa-brain me-2"></i>Evaluate with AI';
+            evaluatePdfBtn.disabled = false;
+            
+            if (data.success) {
+                // Show results
+                showEvaluationResults(data);
+            } else {
+                // Show error
+                showError(data.error || 'Evaluation failed');
+            }
+        })
+        .catch(error => {
+            console.error('Evaluation error:', error);
+            evaluatePdfBtn.innerHTML = '<i class="fas fa-brain me-2"></i>Evaluate with AI';
+            evaluatePdfBtn.disabled = false;
+            showError('Evaluation failed: ' + error.message);
+        });
+    }
+    
+    // Function to show evaluation results
+    function showEvaluationResults(data) {
+        resultContainer.style.display = 'block';
+        var resultsHtml = '<h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Evaluation Results</h5>';
+        resultsHtml += '<div class="row">';
+        resultsHtml += '<div class="col-md-6">';
+        resultsHtml += '<div class="card border-0">';
+        resultsHtml += '<div class="card-body">';
+        resultsHtml += '<h6 class="text-primary">Total Marks: ' + data.evaluation.total_marks + '/' + data.evaluation.max_marks + '</h6>';
+        resultsHtml += '<div class="progress mb-2">';
+        resultsHtml += '<div class="progress-bar" style="width: ' + data.evaluation.percentage + '%"></div>';
+        resultsHtml += '</div>';
+        resultsHtml += '<small class="text-muted">Percentage: ' + data.evaluation.percentage + '%</small>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        resultsHtml += '<div class="col-md-6">';
+        resultsHtml += '<div class="card border-0">';
+        resultsHtml += '<div class="card-body">';
+        resultsHtml += '<h6 class="text-info">Questions Found: ' + data.evaluation.answers_found + '/' + data.evaluation.total_questions + '</h6>';
+        resultsHtml += '<small class="text-muted">Answers processed successfully</small>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        resultsHtml += '<div class="mt-3">';
+        resultsHtml += '<h6><i class="fas fa-list me-2"></i>Detailed Results</h6>';
+        resultsHtml += '<div class="table-responsive">';
+        resultsHtml += '<table class="table table-striped">';
+        resultsHtml += '<thead>';
+        resultsHtml += '<tr>';
+        resultsHtml += '<th>Question</th>';
+        resultsHtml += '<th>Similarity</th>';
+        resultsHtml += '<th>Marks</th>';
+        resultsHtml += '<th>Max Marks</th>';
+        resultsHtml += '</tr>';
+        resultsHtml += '</thead>';
+        resultsHtml += '<tbody>';
+        
+        var resultsArray = Array.isArray(data.evaluation.results)
+            ? data.evaluation.results
+            : Object.values(data.evaluation.results || {});
+
+        for (var i = 0; i < resultsArray.length; i++) {
+            var result = resultsArray[i];
+            var qKey = result.question || ('Q' + (i + 1));
+            var similarity = (typeof result.similarity === 'number') ? result.similarity : 0;
+            resultsHtml += '<tr>';
+            resultsHtml += '<td>' + qKey + '</td>';
+            resultsHtml += '<td>' + (similarity * 100).toFixed(1) + '%</td>';
+            resultsHtml += '<td>' + (result.marks ?? '-') + '</td>';
+            resultsHtml += '<td>' + result.max_marks + '</td>';
+            resultsHtml += '</tr>';
+        }
+        
+        resultsHtml += '</tbody>';
+        resultsHtml += '</table>';
+        resultsHtml += '</div>';
+        resultsHtml += '</div>';
+        
+        resultContainer.innerHTML = resultsHtml;
+    }
+    
+    // Function to show error
+    function showError(message) {
+        resultContainer.style.display = 'block';
+        resultContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Error:</strong> ${message}
+            </div>
+        `;
+    }
+
+    // Guard in case user submits via Enter key
+    uploadForm.addEventListener('submit', function() {
+        uploadModal.show();
+    });
+
+    console.log('PDF upload page initialized with working analysis button');
+});
+
+// Simple file upload functionality
+if (fileUploadArea && fileInput) {
+    fileUploadArea.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/pdf') {
+            updateFileDisplay(file);
+        } else {
+            alert('Please select a PDF file');
+        }
+    });
+    
+    // Drag and drop
+    fileUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', () => {
+        fileUploadArea.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type === 'application/pdf') {
+            fileInput.files = files;
+            updateFileDisplay(files[0]);
+        }
+    });
+}
+</script>
+{% endblock %}
+
+</html>

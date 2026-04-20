@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ pdf_document.title }} - PDF Analysis{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh if processing
+    const status = "{{ pdf_document.analysis_status }}";
+    if (status === 'processing') {
+        console.log("Analysis in progress, auto-refreshing in 5 seconds...");
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000);
+    }
+
+    // Add loading state to Start Analysis button
+    const analysisForms = document.querySelectorAll('form[action*="analysis"]');
+    analysisForms.forEach(form => {
+        form.addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.classList.add('disabled');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting...';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">{{ pdf_document.title }}</h1>
+                    <p class="text-muted mb-0">
+                        Uploaded on {{ pdf_document.uploaded_at|date:"F d, Y" }} 
+                        {% if pdf_document.uploaded_by %}by {{ pdf_document.uploaded_by.username }}{% endif %}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        {% if analysis_result %}
+                            <a href="{% url 'pdf_analysis' pdf_document.pk %}" class="btn btn-success">
+                                <i class="fas fa-chart-bar me-1"></i>View Analysis
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'pdf_export' pdf_document.pk %}" class="btn btn-outline-primary">
+                            <i class="fas fa-download me-1"></i>Export
+                        </a>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% if request.user.role == 'teacher' %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'evaluation:scoring_range_list' %}">
+                                            <i class="fas fa-cogs me-1"></i>Scoring Rules
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'pdf_list' %}">
+                                        <i class="fas fa-list me-1"></i>All PDFs
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'pdf_upload' %}">
+                                        <i class="fas fa-plus-circle me-1"></i>Upload New PDF
+                                    </a>
+                                </li>
+                                {% if analysis_result %}
+                                    <li>
+                                        <form method="post" action="{% url 'pdf_retry' pdf_document.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-sync me-1"></i>Re-analyze
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <form method="post" action="{% url 'pdf_analysis' pdf_document.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-play me-1"></i>Start Analysis
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Badge -->
+            <div class="mb-4 d-flex align-items-center">
+                {% if pdf_document.analysis_status == 'completed' %}
+                    <span class="badge bg-success me-2">Analysis Complete</span>
+                {% elif pdf_document.analysis_status == 'processing' %}
+                    <span class="badge bg-warning me-2">
+                        <i class="fas fa-spinner fa-spin me-1"></i>Processing...
+                    </span>
+                    <small class="text-muted">Status: Analyzing content. This may take a minute.</small>
+                {% elif pdf_document.analysis_status == 'failed' %}
+                    <span class="badge bg-danger me-2">Analysis Failed</span>
+                {% else %}
+                    <span class="badge bg-secondary me-2">Pending Analysis</span>
+                {% endif %}
+            </div>
+
+            <!-- Analysis Results -->
+            {% if analysis_result %}
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Analysis Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="text-primary">{{ analysis_result.overall_score|floatformat:1 }}</h4>
+                                            <small class="text-muted">Overall Score</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="text-info">{{ analysis_result.word_count }}</h4>
+                                            <small class="text-muted">Words</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="text-success">{{ analysis_result.question_count }}</h4>
+                                            <small class="text-muted">Questions</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="text-warning">{{ analysis_result.ocr_confidence|floatformat:2 }}</h4>
+                                            <small class="text-muted">OCR Confidence</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Extracted Text Preview -->
+                                <div class="mb-3">
+                                    <h6>Extracted Text Preview</h6>
+                                    <div class="border p-3" style="max-height: 200px; overflow-y: auto;">
+                                        <small class="text-muted">{{ analysis_result.extracted_text|truncatechars:500 }}</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Questions Found -->
+                                {% if analysis_result.detected_questions %}
+                                    <div class="mb-3">
+                                        <h6>Questions Found ({{ analysis_result.detected_questions|length }})</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Question</th>
+                                                        <th>Type</th>
+                                                        <th>Confidence</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for question in analysis_result.detected_questions %}
+                                                        <tr>
+                                                            <td>{{ question.text|truncatechars:100 }}</td>
+                                                            <td>{{ question.type|default:"Unknown" }}</td>
+                                                            <td>
+                                                                <span class="badge bg-{% if question.confidence > 0.8 %}success{% elif question.confidence > 0.6 %}warning{% else %}danger{% endif %}">
+                                                                    {{ question.confidence|floatformat:2 }}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions Panel -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Actions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'pdf_analysis' pdf_document.pk %}" class="btn btn-success">
+                                        <i class="fas fa-chart-bar me-1"></i>View Analysis
+                                    </a>
+                                    <a href="{% url 'pdf_export' pdf_document.pk %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-download me-1"></i>Export Results
+                                    </a>
+                                    {% if analysis_result %}
+                                        <form method="post" action="{% url 'pdf_retry' pdf_document.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-warning">
+                                                <i class="fas fa-sync me-1"></i>Re-analyze
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{% url 'pdf_analysis' pdf_document.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-play me-1"></i>Start Analysis
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    <a href="{% url 'pdf_delete' pdf_document.pk %}" class="btn btn-danger">
+                                        <i class="fas fa-trash me-1"></i>Delete PDF
+                                    </a>
+                                </div>
+                                
+                                <!-- Recent Processing Logs -->
+                                {% if processing_logs %}
+                                    <div class="mt-4">
+                                        <h6>Processing Logs</h6>
+                                        <div class="list-group list-group-flush border-top">
+                                            {% for log in processing_logs %}
+                                                <div class="list-group-item px-0 py-2">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="fw-bold text-{% if log.log_level == 'error' %}danger{% elif log.log_level == 'warning' %}warning{% else %}primary{% endif %}">
+                                                            {{ log.log_level|upper }}
+                                                        </small>
+                                                        <small class="text-muted">{{ log.timestamp|date:"H:i:s" }}</small>
+                                                    </div>
+                                                    <small class="d-block">{{ log.message }}</small>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <!-- No Analysis Results -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Start Analysis</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="mb-4">
+                                    <i class="fas fa-file-pdf fa-4x text-muted mb-3"></i>
+                                    <h5>Ready to Analyze PDF</h5>
+                                    <p class="text-muted">Click the button below to start AI-powered analysis of this PDF document.</p>
+                                </div>
+                                
+                                <form method="post" action="{% url 'pdf_analysis' pdf_document.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-play me-2"></i>Start Analysis
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container mt-5" id="profile-container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user-circle me-2"></i>User Profile</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-4">
+                            <div class="profile-avatar mb-3">
+                                <i class="fas fa-user-circle fa-7x text-secondary"></i>
+                            </div>
+                            <h5>{{ user.get_full_name|default:user.email }}</h5>
+                            <span class="badge bg-info text-dark">{{ user.get_role_display }}</span>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="border-bottom pb-2">Account Information</h5>
+                            <dl class="row mt-3">
+                                <dt class="col-sm-4">First Name</dt>
+                                <dd class="col-sm-8">{{ user.first_name|default:"Not set" }}</dd>
+                                
+                                <dt class="col-sm-4">Last Name</dt>
+                                <dd class="col-sm-8">{{ user.last_name|default:"Not set" }}</dd>
+                                
+                                <dt class="col-sm-4">Email</dt>
+                                <dd class="col-sm-8">{{ user.email }}</dd>
+                                
+                                <dt class="col-sm-4">Phone Number</dt>
+                                <dd class="col-sm-8">{{ user.phone_number|default:"Not set" }}</dd>
+                            </dl>
+                            
+                            <h5 class="border-bottom pb-2 mt-4">Professional Details</h5>
+                            <dl class="row mt-3">
+                                <dt class="col-sm-4">Institution</dt>
+                                <dd class="col-sm-8">{{ profile.institution|default:"Not set" }}</dd>
+                                
+                                <dt class="col-sm-4">Department</dt>
+                                <dd class="col-sm-8">{{ profile.department|default:"Not set" }}</dd>
+                                
+                                {% if user.role == 'student' %}
+                                <dt class="col-sm-4">Student ID</dt>
+                                <dd class="col-sm-8">{{ profile.student_id|default:"Not set" }}</dd>
+                                {% elif user.role == 'teacher' %}
+                                <dt class="col-sm-4">Teacher ID</dt>
+                                <dd class="col-sm-8">{{ profile.teacher_id|default:"Not set" }}</dd>
+                                {% endif %}
+                                
+                                <dt class="col-sm-4">Bio</dt>
+                                <dd class="col-sm-8">{{ profile.bio|default:"No bio provided" }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-end bg-light" style="position: sticky; bottom: 0; z-index: 100;">
+                    <a href="{% url 'edit_profile' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-edit me-2"></i>Edit Profile
+                    </a>
+                    <a href="{% url 'logout' %}" class="btn btn-danger">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 15px;
+    }
+    .card-header {
+        border-radius: 15px 15px 0 0 !important;
+    }
+    .profile-avatar {
+        padding: 20px;
+    }
+    dt {
+        font-weight: 600;
+        color: #495057;
+    }
+    dd {
+        color: #212529;
+    }
+    
+    /* Card footer styling for logout button */
+    .card-footer {
+        border-top: 2px solid #dee2e6;
+        padding: 1.5rem 1.25rem;
+        background-color: #f8f9fa !important;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        bottom: 0;
+        z-index: 100;
+    }
+    
+    /* Ensure logout button is always visible */
+    .card-footer .btn {
+        min-width: 120px;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .card-footer .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    }
+    
+    .card-footer .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    .card-footer .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+    }
+    
+    .card-footer .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .card-footer {
+            padding: 1rem;
+        }
+        
+        .card-footer .btn {
+            min-width: 100px;
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-footer .btn-danger,
+        .card-footer .btn-primary {
+            margin-right: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effect to logout button
+    const logoutBtn = document.querySelector('.card-footer .btn-danger');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px) scale(1.05)';
+        });
+        
+        logoutBtn.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    }
+    
+    // Add click confirmation for logout
+    const logoutLink = document.querySelector('a[href*="logout"]');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            const confirmed = confirm('Are you sure you want to logout?');
+            if (!confirmed) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    console.log('Profile page loaded - logout button ready');
+});
+</script>
+{% endblock %}

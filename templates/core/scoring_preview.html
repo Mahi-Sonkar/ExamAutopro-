@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Scoring Preview{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <h3 class="mb-3"><i class="fas fa-eye me-2"></i>Scoring Preview</h3>
+
+  <div class="card mb-3">
+    <div class="card-header bg-white">
+      <strong>Configuration</strong>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4"><strong>Full ≥</strong> {{ scoring_config.full_marks_threshold }}</div>
+        <div class="col-md-4"><strong>Partial ≥</strong> {{ scoring_config.partial_marks_threshold }}</div>
+        <div class="col-md-4"><strong>Minimum ≥</strong> {{ scoring_config.minimum_marks_threshold }}</div>
+      </div>
+      <div class="row mt-2">
+        <div class="col-md-4"><strong>Full %</strong> {{ scoring_config.full_marks_percentage }}</div>
+        <div class="col-md-4"><strong>Partial %</strong> {{ scoring_config.partial_marks_percentage }}</div>
+        <div class="col-md-4"><strong>Minimum %</strong> {{ scoring_config.minimum_marks_percentage }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white">
+      <strong>Questions</strong>
+    </div>
+    <div class="card-body p-0">
+      {% if questions %}
+      <div class="list-group list-group-flush">
+        {% for q in questions %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="fw-semibold">Q{{ q.question_number }} • {{ q.max_marks }} marks</div>
+              <div class="text-muted small">{{ q.question_text|default:"(no text)" }}</div>
+            </div>
+            <span class="badge bg-secondary">{{ q.get_question_type_display }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="p-3 text-muted">No questions configured.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <a href="{% url 'core:scoring_dashboard' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+</div>
+{% endblock %}

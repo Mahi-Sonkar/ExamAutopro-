@@ -1,0 +1,507 @@
+{% extends 'base.html' %}
+
+{% block title %}Taking Exam: {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header with Timer -->
+    <div class="card border-0 shadow-sm mb-4 sticky-top" style="top: 20px; z-index: 1020;">
+        <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div>
+                <h4 class="mb-0 fw-bold">{{ exam.title }}</h4>
+                <small class="text-muted">Student: {{ user.email }}</small>
+            </div>
+            <div class="text-center px-4 py-2 bg-light rounded-pill border border-primary">
+                <div class="small text-uppercase fw-bold text-primary" style="font-size: 0.7rem;">Time Remaining</div>
+                <div id="exam-timer" class="h4 mb-0 fw-bold font-monospace text-primary">--:--:--</div>
+            </div>
+            <div>
+                <button type="button" class="btn btn-danger fw-bold px-4" onclick="showSubmitModal(); return false;">
+                    Submit Exam
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Questions Navigation (Sidebar) -->
+        <div class="col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 120px;">
+                <div class="card-header bg-white py-3 border-0">
+                    <h6 class="mb-0 fw-bold">Questions Navigator</h6>
+                </div>
+                <div class="card-body p-3">
+                    <div class="d-flex flex-wrap gap-2" id="question-nav">
+                        {% for question in questions %}
+                            <a href="#question-{{ question.id }}" class="btn btn-outline-secondary btn-sm question-nav-btn" 
+                               style="width: 40px; height: 40px; line-height: 28px;" id="nav-q-{{ question.id }}">
+                                {{ forloop.counter }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                    <hr class="my-3">
+                    <div class="small text-muted mb-2">
+                        <span class="badge bg-success me-1">&nbsp;</span> Answered
+                    </div>
+                    <div class="small text-muted">
+                        <span class="badge bg-outline-secondary border me-1">&nbsp;</span> Unanswered
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions List -->
+        <div class="col-lg-9">
+            <form action="{% url 'submit_exam' exam.id %}" method="post" id="exam-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% for question in questions %}
+                    <div class="card border-0 shadow-sm mb-4 question-block" id="question-{{ question.id }}">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="badge bg-light text-dark fw-bold">QUESTION {{ forloop.counter }}</span>
+                                <span class="text-muted small">{{ question.marks }} Marks</span>
+                            </div>
+                            
+                            <h5 class="fw-bold mb-4">{{ question.question_text|linebreaks }}</h5>
+                            
+                            {% if question.has_image and question.question_image %}
+                                <div class="mb-4">
+                                    <img src="{{ question.question_image.url }}" class="img-fluid rounded border" style="max-height: 300px;">
+                                </div>
+                            {% endif %}
+
+                            <div class="answer-section">
+                                {% if question.question_type == 'mcq' or question.question_type == 'true_false' %}
+                                    <div class="list-group">
+                                        {% for option in question.options.all %}
+                                            <label class="list-group-item list-group-item-action border-0 bg-light rounded-3 mb-2 p-3 d-flex align-items-center cursor-pointer">
+                                                <input type="radio" name="question_{{ question.id }}" value="{{ option.id }}" 
+                                                       class="form-check-input me-3" data-question-id="{{ question.id }}">
+                                                <span>{{ option.option_text }}</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="mb-3">
+                                        <div class="form-floating mb-2">
+                                            <textarea name="question_{{ question.id }}" class="form-control descriptive-answer" 
+                                                      placeholder="Type your answer here..." style="height: 200px" 
+                                                      data-question-id="{{ question.id }}"></textarea>
+                                            <label>Your Answer</label>
+                                        </div>
+                                        <div class="file-upload-section">
+                                            <label class="form-label small text-muted">Or upload a handwritten answer (PDF/Image):</label>
+                                            <input type="file" name="file_{{ question.id }}" class="form-control form-control-sm" 
+                                                   accept=".pdf,image/*" data-question-id="{{ question.id }}">
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div class="modal fade" id="submitModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Submit Your Exam?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p class="mb-0">Are you sure you want to submit your exam? You won't be able to change your answers after submission.</p>
+                <div class="alert alert-warning mt-3 mb-0 py-2 small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Please ensure all questions are answered.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Go Back</button>
+                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="submitExamForm();">
+                    Yes, Submit Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Proctoring Overlay -->
+<div id="proctoring-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark text-white d-none flex-column align-items-center justify-content-center" style="z-index: 9999; opacity: 0.98;">
+    <i class="fas fa-ban fa-5x mb-4 text-danger"></i>
+    <h2 class="fw-bold mb-2">Exam Terminated!</h2>
+    <p class="h5 mb-4 text-center px-4" id="alert-msg">You switched tabs or lost focus. This is a critical violation.</p>
+</div>
+
+<style>
+    body { background-color: #f4f7f6; }
+    .question-block { scroll-margin-top: 100px; }
+    .cursor-pointer { cursor: pointer; }
+    .list-group-item:hover { background-color: #e9ecef !important; }
+    .form-check-input:checked + span { font-weight: bold; }
+    .badge-outline-secondary { border: 1px solid #6c757d; color: #6c757d; }
+    .question-nav-btn.answered { background-color: #198754 !important; border-color: #198754 !important; color: white !important; }
+</style>
+
+<script>
+    // Timer Logic
+    const examDuration = {{ exam.duration }}; // minutes
+    const startTime = new Date('{{ submission.started_at|date:"Y-m-d H:i:s" }}').getTime();
+    const endTime = startTime + (examDuration * 60 * 1000);
+
+    function updateTimer() {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+
+        if (distance < 0) {
+            clearInterval(timerInterval);
+            document.getElementById("exam-timer").innerHTML = "EXPIRED";
+            document.getElementById("exam-form").submit();
+            return;
+        }
+
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        document.getElementById("exam-timer").innerHTML = 
+            (hours < 10 ? "0" + hours : hours) + ":" + 
+            (minutes < 10 ? "0" + minutes : minutes) + ":" + 
+            (seconds < 10 ? "0" + seconds : seconds);
+        
+        if (distance < (5 * 60 * 1000)) { // Less than 5 mins
+            document.getElementById("exam-timer").classList.add("text-danger");
+        }
+    }
+
+    const timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // Navigator Highlighting
+    function updateNav() {
+        document.querySelectorAll('[data-question-id]').forEach(input => {
+            const qId = input.dataset.questionId;
+            const navBtn = document.getElementById('nav-q-' + qId);
+            
+            if (input.type === 'radio') {
+                const checked = document.querySelector('input[name="question_'+qId+'"]:checked');
+                if (checked) navBtn.classList.add('answered');
+            } else {
+                if (input.value.trim().length > 0) navBtn.classList.add('answered');
+                else navBtn.classList.remove('answered');
+            }
+        });
+    }
+
+    document.querySelectorAll('[data-question-id]').forEach(input => {
+        input.addEventListener('change', updateNav);
+        input.addEventListener('input', updateNav);
+    });
+
+    // Proctoring Logic - AUTO END EXAM ON TAB SWITCH
+    let currentSessionId = null;
+    let isExamEnded = false;
+    const overlay = document.getElementById('proctoring-overlay');
+    const alertMsg = document.getElementById('alert-msg');
+
+    function endExamImmediately(reason) {
+        if (isExamEnded) return;
+        isExamEnded = true;
+
+        // Comprehensive analysis data
+        const analysisData = {
+            violation_type: reason,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            user_agent: navigator.userAgent,
+            screen_resolution: `${window.screen.width}x${window.screen.height}`,
+            viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+            exam_duration: calculateExamDuration(),
+            answers_submitted: countSubmittedAnswers(),
+            session_id: currentSessionId,
+            violation_count: (window.violationCount || 0) + 1
+        };
+
+        // Update violation count
+        window.violationCount = analysisData.violation_count;
+
+        // Enhanced violation message with analysis
+        overlay.classList.remove('d-none');
+        overlay.classList.add('d-flex');
+        alertMsg.innerHTML = `
+            <span class="text-danger h3 fw-bold">CRITICAL VIOLATION!</span><br><br>
+            <strong>Reason:</strong> ${reason}<br><br>
+            <strong>Analysis:</strong><br>
+            - Violation Count: ${analysisData.violation_count}<br>
+            - Exam Duration: ${analysisData.exam_duration}<br>
+            - Answers Submitted: ${analysisData.answers_submitted}<br>
+            - Timestamp: ${new Date().toLocaleString()}<br><br>
+            <strong>The exam has been automatically terminated.</strong><br>
+            Redirecting to results...
+        `;
+        
+        // Log detailed analysis to console for debugging
+        console.log('Tab Switch Violation Analysis:', analysisData);
+
+        if (!currentSessionId) {
+            window.location.reload(); 
+            return;
+        }
+
+        // Enhanced backend call with comprehensive data
+        fetch(`/proctoring/decline/${currentSessionId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                violation_type: reason,
+                analysis_data: analysisData,
+                immediate_termination: true,
+                severity: 'critical'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Additional logging for analysis
+            console.log('Exam termination response:', data);
+            
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/exams/';
+            }, 3000);
+        }).catch(err => {
+            console.error('Failed to decline exam:', err);
+            window.location.reload();
+        });
+    }
+
+    // Helper functions for analysis
+    function calculateExamDuration() {
+        const startTime = new Date('{{ submission.started_at|date:"Y-m-d H:i:s" }}');
+        const now = new Date();
+        const duration = Math.floor((now - startTime) / 1000 / 60); // in minutes
+        return `${duration} minutes`;
+    }
+
+    function countSubmittedAnswers() {
+        const answeredQuestions = document.querySelectorAll('[data-question-id]');
+        let count = 0;
+        
+        answeredQuestions.forEach(question => {
+            const questionId = question.getAttribute('data-question-id');
+            let isAnswered = false;
+            
+            if (question.type === 'radio') {
+                const radioInputs = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
+                isAnswered = radioInputs.length > 0;
+            } else if (question.type === 'textarea') {
+                const textArea = document.querySelector(`textarea[name="question_${questionId}"]`);
+                isAnswered = textArea && textArea.value.trim() !== '';
+            } else if (question.type === 'file') {
+                const fileInput = document.querySelector(`input[name="file_${questionId}"]`);
+                isAnswered = fileInput && fileInput.files.length > 0;
+            }
+            
+            if (isAnswered) count++;
+        });
+        
+        return `${count}/${answeredQuestions.length}`;
+    }
+
+    // Detect Tab Switch / Window Blur - Enhanced
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            endExamImmediately('Tab switched - Exam terminated');
+        }
+    });
+
+    window.onblur = function() {
+        endExamImmediately('Window focus lost - Exam terminated');
+    };
+
+    // Additional tab switch detection
+    window.addEventListener('beforeunload', function(e) {
+        if (!isExamEnded) {
+            e.preventDefault();
+            e.returnValue = '';
+            endExamImmediately('Attempted to leave exam page');
+        }
+    });
+
+    // Detect Ctrl+Tab, Alt+Tab shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.altKey && e.key === 'Tab') {
+            endExamImmediately('Alt+Tab detected - Exam terminated');
+        }
+        if (e.ctrlKey && e.key === 'Tab') {
+            endExamImmediately('Ctrl+Tab detected - Exam terminated');
+        }
+    });
+
+    // Start proctoring session on load
+    fetch('/proctoring/start/{{ exam.id }}/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'screen_resolution': `${window.screen.width}x${window.screen.height}`,
+            'platform': navigator.platform,
+            'browser': navigator.userAgent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.session_id) {
+            currentSessionId = data.session_id;
+            console.log('Proctoring session started:', currentSessionId);
+        }
+    });
+
+    function logProctoringEvent(type, desc) {
+        if (!currentSessionId) return;
+        
+        fetch(`/proctoring/event/${currentSessionId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                event_type: type,
+                description: desc,
+                severity: 'high',
+                metadata: {
+                    url: window.location.href,
+                    timestamp: new Date().toISOString()
+                }
+            })
+        }).catch(err => console.error('Failed to log proctoring event:', err));
+    }
+
+    // Disable Right Click
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    // Disable Copy/Paste
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('paste', e => e.preventDefault());
+    
+    // Add event listeners to check answers automatically
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initial check
+        checkAllAnswers();
+        
+        // Add listeners to all form inputs
+        const inputs = document.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('change', checkAllAnswers);
+            input.addEventListener('input', checkAllAnswers);
+        });
+        
+        // Add listeners to file inputs
+        const fileInputs = document.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            input.addEventListener('change', checkAllAnswers);
+        });
+    });
+    
+            // Fallback: manually show modal
+            const modalElement = document.getElementById('submitModal');
+            modalElement.style.display = 'block';
+            modalElement.classList.add('show');
+            document.body.classList.add('modal-open');
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'modal-backdrop';
+            document.body.appendChild(backdrop);
+        }
+    }
+
+    // Function to check if all questions are answered
+    function checkAllAnswers() {
+        const questions = document.querySelectorAll('[data-question-id]');
+        let allAnswered = true;
+        let unansweredQuestions = [];
+        
+        questions.forEach(question => {
+            const questionId = question.getAttribute('data-question-id');
+            let isAnswered = false;
+            
+            // Check different question types
+            if (question.type === 'radio') {
+                const radioInputs = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
+                isAnswered = radioInputs.length > 0;
+            } else if (question.type === 'textarea') {
+                const textArea = document.querySelector(`textarea[name="question_${questionId}"]`);
+                isAnswered = textArea && textArea.value.trim() !== '';
+            } else if (question.type === 'file') {
+                const fileInput = document.querySelector(`input[name="file_${questionId}"]`);
+                isAnswered = fileInput && fileInput.files.length > 0;
+            }
+            
+            if (!isAnswered) {
+                unansweredQuestions.push(questionId);
+                allAnswered = false;
+            }
+        });
+        
+        // Update submit button state
+        const submitButton = document.querySelector('button[onclick="showSubmitModal()"]');
+        if (submitButton) {
+            if (allAnswered) {
+                submitButton.disabled = false;
+                submitButton.classList.remove('disabled');
+                submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Exam';
+            } else {
+                submitButton.disabled = true;
+                submitButton.classList.add('disabled');
+                submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Please answer all questions';
+            }
+        }
+        
+        return allAnswered;
+    }
+
+    // Function to submit exam form from modal
+    function submitExamForm() {
+        // Check all answers before submission
+        if (!checkAllAnswers()) {
+            alert('Please answer all questions before submitting the exam.');
+            return false;
+        }
+        
+        try {
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('submitModal'));
+            if (modal) {
+                modal.hide();
+            } else {
+                // Fallback: manually hide modal
+                const modalElement = document.getElementById('submitModal');
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                document.body.classList.remove('modal-open');
+                
+                // Remove backdrop
+                const backdrop = document.getElementById('modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+            }
+        } catch (error) {
+            console.log('Modal close error:', error);
+        }
+        
+        // Submit the form
+        document.getElementById('exam-form').submit();
+    }
+
+</script>
+{% endblock %}

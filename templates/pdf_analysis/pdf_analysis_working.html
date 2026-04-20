@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+
+{% block title %}PDF Analysis - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-brain fa-2x text-primary me-3"></i>
+                        <div>
+                            <h4 class="mb-0">AI-Powered PDF Analysis</h4>
+                            <p class="text-muted mb-0">Upload PDF for intelligent evaluation with OCR and NLP</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Upload Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="file-upload-area" id="file-upload-area">
+                                <div class="text-center p-4 border-2 border-dashed rounded-3" 
+                                     style="border-color: #dee2e6; background-color: #f8f9fa;" id="upload-content">
+                                    <div id="upload-prompt">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">Drop PDF file here or click to browse</h5>
+                                        <p class="text-muted small">Maximum file size: 50MB | Supported format: PDF</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Control Buttons -->
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <button type="button" class="btn btn-primary btn-lg me-2" id="start-analysis-btn" disabled>
+                                <i class="fas fa-play me-2"></i>Start Analysis
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg me-2" id="evaluate-ai-btn" disabled>
+                                <i class="fas fa-brain me-2"></i>Evaluate with AI
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg" id="clear-btn">
+                                <i class="fas fa-trash me-2"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Section -->
+                    <div class="row mb-4" id="progress-section" style="display: none;">
+                        <div class="col-12">
+                            <div class="card border-0">
+                                <div class="card-body">
+                                    <h6 class="text-center mb-3">
+                                        <i class="fas fa-cog fa-spin me-2"></i>
+                                        <span id="progress-text">Processing...</span>
+                                    </h6>
+                                    <div class="progress mb-3">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             id="analysis-progress" role="progressbar" style="width: 0%">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Section -->
+                    <div class="row" id="results-section" style="display: none;">
+                        <div class="col-12">
+                            <div class="card border-0">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-chart-line me-2"></i>Analysis Results
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h4 class="text-primary" id="total-marks">0</h4>
+                                                <small class="text-muted">Total Marks</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h4 class="text-success" id="max-marks">0</h4>
+                                                <small class="text-muted">Max Marks</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h4 class="text-info" id="percentage">0%</h4>
+                                                <small class="text-muted">Percentage</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h4 class="text-warning" id="questions-found">0</h4>
+                                                <small class="text-muted">Questions Found</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="table-responsive mt-4">
+                                        <table class="table table-striped table-hover">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Question</th>
+                                                    <th>Similarity</th>
+                                                    <th>Marks</th>
+                                                    <th>Max Marks</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="results-tbody">
+                                                <!-- Results will be populated here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Modal -->
+<div class="modal fade" id="resultsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-line me-2"></i>Detailed Analysis Results
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="detailed-results">
+                    <!-- Detailed results will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .file-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        min-height: 200px;
+    }
+    
+    .file-upload-area:hover {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    
+    .file-upload-area.dragover {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .progress-section {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .progress-section.show {
+        opacity: 1;
+    }
+    
+    .results-section {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+    
+    .results-section.show {
+        opacity: 1;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-excellent {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-good {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .status-average {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .status-poor {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let uploadedFile = null;
+    let analysisResults = null;
+    
+    const fileUploadArea = document.getElementById('file-upload-area');
+    const fileInput = document.getElementById('pdf-file-input');
+    const startAnalysisBtn = document.getElementById('start-analysis-btn');
+    const evaluateAiBtn = document.getElementById('evaluate-ai-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const progressSection = document.getElementById('progress-section');
+    const resultsSection = document.getElementById('results-section');
+    const progressText = document.getElementById('progress-text');
+    const analysisProgress = document.getElementById('analysis-progress');
+    const resultsModal = new bootstrap.Modal(document.getElementById('resultsModal'));
+    
+    // File upload handlers
+    fileUploadArea.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            uploadedFile = file;
+            updateFileDisplay(file);
+            enableButtons();
+        }
+    });
+    
+    // Drag and drop handlers
+    fileUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', () => {
+        fileUploadArea.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+        }
+    });
+    
+    // Button handlers
+    startAnalysisBtn.addEventListener('click', startAnalysis);
+    evaluateAiBtn.addEventListener('click', evaluateWithAI);
+    clearBtn.addEventListener('click', clearAll);
+    
+    function updateFileDisplay(file) {
+        const uploadContent = document.getElementById('upload-content');
+        uploadContent.innerHTML = `
+            <i class="fas fa-file-pdf text-success fa-3x mb-3"></i>
+            <h5 class="text-primary">${file.name}</h5>
+            <p class="text-muted">Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+        `;
+    }
+    
+    function enableButtons() {
+        startAnalysisBtn.disabled = false;
+        evaluateAiBtn.disabled = false;
+    }
+    
+    function disableButtons() {
+        startAnalysisBtn.disabled = true;
+        evaluateAiBtn.disabled = true;
+    }
+    
+    function startAnalysis() {
+        if (!uploadedFile) {
+            alert('Please select a PDF file first');
+            return;
+        }
+
+        // Run the same real backend pipeline used by AI evaluation
+        evaluateWithAI();
+    }
+    
+    function evaluateWithAI() {
+        if (!uploadedFile) {
+            alert('Please select a PDF file first');
+            return;
+        }
+        
+        // Show progress
+        showProgress('Processing with AI evaluation engine...');
+        disableButtons();
+        
+        // Create FormData for API call
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        // Make API call
+        fetch('/core/api/evaluate-pdf/', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideProgress();
+            enableButtons();
+            
+            if (data.success) {
+                analysisResults = data.evaluation;
+                showResults();
+                showDetailedResults(data);
+            } else {
+                alert('Evaluation failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            hideProgress();
+            enableButtons();
+            console.error('Evaluation error:', error);
+            alert('Evaluation failed: ' + error.message);
+        });
+    }
+    
+    function showProgress(text) {
+        progressText.textContent = text;
+        progressSection.classList.add('show');
+        resultsSection.classList.remove('show');
+        
+        // Animate progress bar
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            analysisProgress.style.width = progress + '%';
+            if (progress >= 90) {
+                clearInterval(interval);
+            }
+        }, 200);
+    }
+    
+    function hideProgress() {
+        progressSection.classList.remove('show');
+    }
+    
+    function showResults() {
+        hideProgress();
+        resultsSection.classList.add('show');
+        
+        if (analysisResults) {
+            document.getElementById('total-marks').textContent = analysisResults.total_marks;
+            document.getElementById('max-marks').textContent = analysisResults.max_marks;
+            document.getElementById('percentage').textContent = analysisResults.percentage + '%';
+            document.getElementById('questions-found').textContent = analysisResults.answers_found;
+            
+            // Populate results table
+            const tbody = document.getElementById('results-tbody');
+            tbody.innerHTML = '';
+            
+            const resultRows = Array.isArray(analysisResults.results)
+                ? analysisResults.results
+                : Object.values(analysisResults.results || {});
+
+            resultRows.forEach((result, index) => {
+                const qKey = result.question || `Q${index + 1}`;
+                const similarity = typeof result.similarity === 'number' ? result.similarity : 0;
+                const row = document.createElement('tr');
+                const statusClass = similarity > 0.8 ? 'status-excellent' : 
+                                   similarity > 0.6 ? 'status-good' : 
+                                   similarity > 0.4 ? 'status-average' : 'status-poor';
+                
+                row.innerHTML = `
+                    <td>${qKey}</td>
+                    <td>${(similarity * 100).toFixed(1)}%</td>
+                    <td>${result.marks ?? '-'}</td>
+                    <td>${result.max_marks}</td>
+                    <td><span class="status-badge ${statusClass}">${getStatusText(similarity)}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    }
+    
+    function getStatusText(similarity) {
+        if (similarity > 0.8) return 'Excellent';
+        if (similarity > 0.6) return 'Good';
+        if (similarity > 0.4) return 'Average';
+        return 'Poor';
+    }
+    
+    function showDetailedResults(data) {
+        const detailedResults = document.getElementById('detailed-results');
+        detailedResults.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-file-pdf me-2"></i>File Information</h6>
+                    <p><strong>File Name:</strong> ${data.file_name}</p>
+                    <p><strong>Extracted Text:</strong></p>
+                    <div class="border p-2" style="max-height: 200px; overflow-y: auto;">
+                        <pre>${data.extracted_text}</pre>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-cog me-2"></i>Processing Details</h6>
+                    <p><strong>Total Questions:</strong> ${data.evaluation.total_questions}</p>
+                    <p><strong>Answers Found:</strong> ${data.evaluation.answers_found}</p>
+                    <p><strong>Success Rate:</strong> ${((data.evaluation.answers_found / data.evaluation.total_questions) * 100).toFixed(1)}%</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    function clearAll() {
+        uploadedFile = null;
+        analysisResults = null;
+        fileInput.value = '';
+        
+        // Reset UI
+        document.getElementById('upload-content').innerHTML = `
+            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Drop PDF file here or click to browse</h5>
+            <p class="text-muted small">Maximum file size: 50MB | Supported format: PDF</p>
+        `;
+        
+        hideProgress();
+        resultsSection.classList.remove('show');
+        disableButtons();
+    }
+    
+    console.log('PDF Analysis page initialized with complete AI evaluation functionality');
+});
+</script>
+{% endblock %}

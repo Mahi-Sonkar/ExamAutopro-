@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Grace Marks Rules - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-gift me-2"></i>Grace Marks Rules</h1>
+    {% if user.is_teacher %}
+        <a href="#" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Rule
+        </a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if rules %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Rule Name</th>
+                            <th>Condition</th>
+                            <th>Grace Marks</th>
+                            <th>Status</th>
+                            <th>Created By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule in rules %}
+                            <tr>
+                                <td>{{ rule.name }}</td>
+                                <td>{{ rule.get_condition_type_display }}</td>
+                                <td>{{ rule.grace_marks }}</td>
+                                <td>
+                                    <span class="badge bg-{{ rule.is_active|yesno:'success,secondary' }}">
+                                        {{ rule.is_active|yesno:'Active,Inactive' }}
+                                    </span>
+                                </td>
+                                <td>{{ rule.created_by.email }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-gift fa-3x text-muted mb-3"></i>
+                <h5>No Grace Marks Rules</h5>
+                <p class="text-muted">Create rules to automatically award grace marks based on various conditions.</p>
+                {% if user.is_teacher %}
+                    <a href="#" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create First Rule
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

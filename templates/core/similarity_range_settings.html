@@ -1,0 +1,738 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.similarity-range-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Question Range Display Styles */
+.question-ranges-display {
+    margin-top: 20px;
+}
+
+.ranges-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.range-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+    transition: all 0.3s ease;
+}
+
+.range-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.range-info {
+    flex: 1;
+}
+
+.range-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.range-details {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.range-type {
+    text-align: right;
+}
+
+.summary-card {
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+}
+
+.summary-card h5 {
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.summary-card small {
+    color: #6c757d;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.empty-state {
+    padding: 40px 20px;
+}
+
+.quick-add-section .card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.quick-add-section .card-header {
+    border-radius: 8px 8px 0 0;
+}
+
+.range-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.range-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    margin: -25px -25px 20px -25px;
+}
+
+.range-visual {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.range-bar {
+    flex: 1;
+    height: 30px;
+    background: linear-gradient(to right, 
+        #dc3545 0%, 
+        #dc3545 var(--minimum-percent),
+        #ffc107 var(--minimum-percent), 
+        #ffc107 var(--partial-percent),
+        #17a2b8 var(--partial-percent), 
+        #17a2b8 var(--full-percent),
+        #28a745 var(--full-percent), 
+        #28a745 100%
+    );
+    border-radius: 15px;
+    position: relative;
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+}
+
+.input-group-text {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-left: none;
+    padding: 10px 15px;
+    border-radius: 0 8px 8px 0;
+    font-weight: 600;
+}
+
+.similarity-preview {
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 0 8px 8px 0;
+}
+
+.threshold-indicator {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+.threshold-full { background: #d4edda; color: #155724; }
+.threshold-partial { background: #fff3cd; color: #856404; }
+.threshold-minimum { background: #f8d7da; color: #721c24; }
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.help-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.calculator-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.score-preview {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border: 2px solid #e9ecef;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="similarity-range-container">
+    <div class="range-card">
+        <div class="range-header">
+            <h3 class="mb-0">
+                <i class="fas fa-sliders-h mr-2"></i>
+                Similarity Range Settings
+            </h3>
+            <p class="mb-0 mt-2">
+                Configure similarity thresholds for automatic scoring
+            </p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Visual Range Display -->
+            <div class="range-visual">
+                <div class="range-bar" style="
+                    --minimum-percent: {{ scoring_config.minimum_marks_threshold|mul:100 }}%;
+                    --partial-percent: {{ scoring_config.partial_marks_threshold|mul:100 }}%;
+                    --full-percent: {{ scoring_config.full_marks_threshold|mul:100 }}%;
+                "></div>
+            </div>
+            <div class="range-labels">
+                <span>0%</span>
+                <span>Minimum ({{ scoring_config.minimum_marks_threshold|mul:100 }}%)</span>
+                <span>Partial ({{ scoring_config.partial_marks_threshold|mul:100 }}%)</span>
+                <span>Full ({{ scoring_config.full_marks_threshold|mul:100 }}%)</span>
+                <span>100%</span>
+            </div>
+
+            <!-- Similarity Thresholds -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="full_marks_threshold">
+                            Full Marks Threshold
+                            <span class="threshold-indicator threshold-full">80%+</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="full_marks_threshold" 
+                                   name="full_marks_threshold"
+                                   value="{{ scoring_config.full_marks_threshold }}"
+                                   step="0.01" 
+                                   min="0" 
+                                   max="1" 
+                                   required>
+                            <span class="input-group-text">0.0-1.0</span>
+                        </div>
+                        <small class="help-text">
+                            Students scoring above this get full marks
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="partial_marks_threshold">
+                            Partial Marks Threshold
+                            <span class="threshold-indicator threshold-partial">60%+</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="partial_marks_threshold" 
+                                   name="partial_marks_threshold"
+                                   value="{{ scoring_config.partial_marks_threshold }}"
+                                   step="0.01" 
+                                   min="0" 
+                                   max="1" 
+                                   required>
+                            <span class="input-group-text">0.0-1.0</span>
+                        </div>
+                        <small class="help-text">
+                            Students scoring above this get partial marks
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="minimum_marks_threshold">
+                            Minimum Marks Threshold
+                            <span class="threshold-indicator threshold-minimum">40%+</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="minimum_marks_threshold" 
+                                   name="minimum_marks_threshold"
+                                   value="{{ scoring_config.minimum_marks_threshold }}"
+                                   step="0.01" 
+                                   min="0" 
+                                   max="1" 
+                                   required>
+                            <span class="input-group-text">0.0-1.0</span>
+                        </div>
+                        <small class="help-text">
+                            Students scoring above this get minimum marks
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Marks Percentage -->
+            <h4 class="mt-4 mb-3">
+                <i class="fas fa-percentage mr-2"></i>
+                Marks Percentage Settings
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="full_marks_percentage">Full Marks Percentage</label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="full_marks_percentage" 
+                                   name="full_marks_percentage"
+                                   value="{{ scoring_config.full_marks_percentage }}"
+                                   step="0.1" 
+                                   min="0" 
+                                   max="100" 
+                                   required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <small class="help-text">
+                            Percentage of marks to award for full similarity
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="partial_marks_percentage">Partial Marks Percentage</label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="partial_marks_percentage" 
+                                   name="partial_marks_percentage"
+                                   value="{{ scoring_config.partial_marks_percentage }}"
+                                   step="0.1" 
+                                   min="0" 
+                                   max="100" 
+                                   required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <small class="help-text">
+                            Percentage of marks to award for partial similarity
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="minimum_marks_percentage">Minimum Marks Percentage</label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="minimum_marks_percentage" 
+                                   name="minimum_marks_percentage"
+                                   value="{{ scoring_config.minimum_marks_percentage }}"
+                                   step="0.1" 
+                                   min="0" 
+                                   max="100" 
+                                   required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <small class="help-text">
+                            Percentage of marks to award for minimum similarity
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score Calculator -->
+            <div class="calculator-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-calculator mr-2"></i>
+                    Score Calculator
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="calc_similarity">Similarity Score</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="calc_similarity" 
+                                   step="0.01" 
+                                   min="0" 
+                                   max="1" 
+                                   placeholder="Enter similarity (0.0-1.0)">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="calc_max_marks">Maximum Marks</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="calc_max_marks" 
+                                   step="0.5" 
+                                   min="0.5" 
+                                   placeholder="Enter max marks">
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-info btn-sm" onclick="calculateScore()">
+                    <i class="fas fa-calculator mr-1"></i>
+                    Calculate Score
+                </button>
+                <div id="scoreResult" class="score-preview" style="display: none;">
+                    <!-- Score result will be displayed here -->
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="similarity-preview">
+                <h6 class="mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    How it works:
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Full Marks ({{ scoring_config.full_marks_threshold|mul:100 }}%+):</strong> 
+                       {{ scoring_config.full_marks_percentage }}% of total marks</li>
+                    <li><strong>Partial Marks ({{ scoring_config.partial_marks_threshold|mul:100 }}%-{{ scoring_config.full_marks_threshold|mul:100 }}%):</strong> 
+                       {{ scoring_config.partial_marks_percentage }}% of total marks</li>
+                    <li><strong>Minimum Marks ({{ scoring_config.minimum_marks_threshold|mul:100 }}%-{{ scoring_config.partial_marks_threshold|mul:100 }}%):</strong> 
+                       {{ scoring_config.minimum_marks_percentage }}% of total marks</li>
+                    <li><strong>No Marks (0-{{ scoring_config.minimum_marks_threshold|mul:100 }}%):</strong> 
+                       0 marks</li>
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'core:question_wise_scoring' scoring_config.id %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Questions
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save mr-2"></i>
+                    Save Similarity Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+<!-- Question Marks Range Display -->
+<div class="container mt-4">
+    <div class="range-card">
+        <div class="range-header">
+            <h4><i class="fas fa-list-ol mr-2"></i>Question Marks Distribution</h4>
+            <p class="mb-0">View marks allocation for question ranges</p>
+        </div>
+        
+        <div class="question-ranges-display">
+            {% if question_ranges %}
+                <div class="ranges-list">
+                    {% for range in question_ranges %}
+                        <div class="range-item">
+                            <div class="range-info">
+                                <div class="range-label">
+                                    <i class="fas fa-layer-group mr-2 text-primary"></i>
+                                    <strong>Question {{ range.start }} to {{ range.end }}</strong>
+                                </div>
+                                <div class="range-details">
+                                    <span class="badge bg-success">{{ range.marks_per_question }} marks each</span>
+                                    <span class="badge bg-info">{{ range.question_count }} questions</span>
+                                    <span class="badge bg-warning">{{ range.total_marks }} total marks</span>
+                                </div>
+                            </div>
+                            <div class="range-type d-flex align-items-center">
+                                <div class="text-right mr-3">
+                                    <small class="text-muted d-block">{{ range.question_type|title }}</small>
+                                </div>
+                                <form method="post" action="{% url 'core:delete_question_range' scoring_config.id %}" onsubmit="return confirm('Are you sure you want to delete questions {{ range.start }} to {{ range.end }}?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="start_q" value="{{ range.start }}">
+                                    <input type="hidden" name="end_q" value="{{ range.end }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Range">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="summary-section mt-4">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="summary-card text-center">
+                                <h5 class="text-primary">{{ total_questions }}</h5>
+                                <small>Total Questions</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-card text-center">
+                                <h5 class="text-success">{{ total_marks }}</h5>
+                                <small>Total Marks</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-card text-center">
+                                <h5 class="text-info">{{ question_count }}</h5>
+                                <small>Question Types</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-card text-center">
+                                <h5 class="text-warning">{{ custom_settings_count }}</h5>
+                                <small>Custom Settings</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="empty-state text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Question Ranges Configured</h5>
+                    <p class="text-muted">Set up question ranges to see marks distribution here</p>
+                    <a href="{% url 'core:question_wise_scoring' scoring_config.id %}" class="btn btn-primary">
+                        <i class="fas fa-plus mr-2"></i>Configure Question Ranges
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Quick Add Range Feature -->
+        <div class="quick-add-section mt-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-plus-circle mr-2"></i>Quick Add Question Range</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'core:bulk_question_setup' scoring_config.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="quick_start">From Q. No.</label>
+                                    <input type="number" name="start_question" class="form-control" 
+                                           id="quick_start" value="1" min="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="quick_end">To Q. No.</label>
+                                    <input type="number" name="end_question" class="form-control" 
+                                           id="quick_end" value="10" min="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="quick_marks">Marks Each</label>
+                                    <input type="number" name="marks_per_question" class="form-control" 
+                                           id="quick_marks" value="2" min="0.5" step="0.5" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="quick_type">Question Type</label>
+                                    <select name="question_type" class="form-control" id="quick_type">
+                                        <option value="short_answer">Short Answer</option>
+                                        <option value="mcq">Multiple Choice</option>
+                                        <option value="essay">Essay</option>
+                                        <option value="fill_blank">Fill in Blank</option>
+                                        <option value="matching">Matching</option>
+                                        <option value="numerical">Numerical</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save mr-2"></i>Add Range
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function calculateScore() {
+    const similarity = parseFloat(document.getElementById('calc_similarity').value);
+    const maxMarks = parseFloat(document.getElementById('calc_max_marks').value);
+    
+    if (isNaN(similarity) || isNaN(maxMarks)) {
+        alert('Please enter valid similarity score and maximum marks');
+        return;
+    }
+    
+    const fullThreshold = {{ scoring_config.full_marks_threshold }};
+    const partialThreshold = {{ scoring_config.partial_marks_threshold }};
+    const minimumThreshold = {{ scoring_config.minimum_marks_threshold }};
+    
+    const fullPercentage = {{ scoring_config.full_marks_percentage }} / 100;
+    const partialPercentage = {{ scoring_config.partial_marks_percentage }} / 100;
+    const minimumPercentage = {{ scoring_config.minimum_marks_percentage }} / 100;
+    
+    let score = 0;
+    let category = '';
+    
+    if (similarity >= fullThreshold) {
+        score = maxMarks * fullPercentage;
+        category = 'Full Marks';
+    } else if (similarity >= partialThreshold) {
+        score = maxMarks * partialPercentage;
+        category = 'Partial Marks';
+    } else if (similarity >= minimumThreshold) {
+        score = maxMarks * minimumPercentage;
+        category = 'Minimum Marks';
+    } else {
+        score = 0;
+        category = 'No Marks';
+    }
+    
+    const resultDiv = document.getElementById('scoreResult');
+    resultDiv.innerHTML = `
+        <h6><i class="fas fa-chart-bar mr-2"></i>Score Calculation Result</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Similarity Score:</strong> ${(similarity * 100).toFixed(1)}%<br>
+                <strong>Category:</strong> ${category}<br>
+                <strong>Max Marks:</strong> ${maxMarks}
+            </div>
+            <div class="col-md-6">
+                <strong>Awarded Marks:</strong> ${score.toFixed(2)}<br>
+                <strong>Percentage:</strong> ${((score / maxMarks) * 100).toFixed(1)}%
+            </div>
+        </div>
+    `;
+    resultDiv.style.display = 'block';
+}
+
+// Auto-update visual range when inputs change
+document.querySelectorAll('input[name*="_threshold"]').forEach(input => {
+    input.addEventListener('input', function() {
+        updateRangeVisual();
+    });
+});
+
+function updateRangeVisual() {
+    const fullThreshold = parseFloat(document.getElementById('full_marks_threshold').value) || 0.8;
+    const partialThreshold = parseFloat(document.getElementById('partial_marks_threshold').value) || 0.6;
+    const minimumThreshold = parseFloat(document.getElementById('minimum_marks_threshold').value) || 0.4;
+    
+    const rangeBar = document.querySelector('.range-bar');
+    if (rangeBar) {
+        rangeBar.style.setProperty('--minimum-percent', `${minimumThreshold * 100}%`);
+        rangeBar.style.setProperty('--partial-percent', `${partialThreshold * 100}%`);
+        rangeBar.style.setProperty('--full-percent', `${fullThreshold * 100}%`);
+    }
+}
+
+// Validate threshold relationships
+document.querySelectorAll('input[name*="_threshold"]').forEach(input => {
+    input.addEventListener('change', function() {
+        validateThresholds();
+    });
+});
+
+function validateThresholds() {
+    const fullThreshold = parseFloat(document.getElementById('full_marks_threshold').value);
+    const partialThreshold = parseFloat(document.getElementById('partial_marks_threshold').value);
+    const minimumThreshold = parseFloat(document.getElementById('minimum_marks_threshold').value);
+    
+    if (fullThreshold <= partialThreshold) {
+        alert('Full marks threshold must be greater than partial marks threshold');
+        document.getElementById('full_marks_threshold').value = (partialThreshold + 0.1).toFixed(2);
+    }
+    
+    if (partialThreshold <= minimumThreshold) {
+        alert('Partial marks threshold must be greater than minimum marks threshold');
+        document.getElementById('partial_marks_threshold').value = (minimumThreshold + 0.1).toFixed(2);
+    }
+    
+    updateRangeVisual();
+}
+</script>
+{% endblock %}

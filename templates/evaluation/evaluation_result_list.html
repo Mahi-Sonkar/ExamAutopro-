@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Evaluation Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h3 mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Evaluation Results
+                </h2>
+                <div class="d-flex gap-2">
+                    {% if request.user.role == 'teacher' %}
+                        <a href="{% url 'evaluation:evaluation_analytics' %}" class="btn btn-outline-success">
+                            <i class="fas fa-chart-bar me-1"></i> Analytics
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Status Message -->
+    {% if database_message %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            {{ database_message }}
+        </div>
+    {% endif %}
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ total_submissions }}</h4>
+                            <p class="card-text">Total Submissions</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ terminated_exams }}</h4>
+                            <p class="card-text">Exams Terminated</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-ban fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ violations_count }}</h4>
+                            <p class="card-text">Total Violations</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ results|length }}</h4>
+                            <p class="card-text">Evaluations</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exam Submissions with Proctoring Data -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Exam Submissions & Proctoring Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if submissions_with_data %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Exam</th>
+                                        <th>Submitted</th>
+                                        <th>Score</th>
+                                        <th>Proctoring Status</th>
+                                        <th>Violations</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in submissions_with_data %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                        {{ item.submission.student.email|slice:":1"|upper }}
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">{{ item.submission.student.get_full_name|default:item.submission.student.email }}</div>
+                                                        <small class="text-muted">{{ item.submission.student.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-medium">{{ item.submission.exam.title }}</div>
+                                                <small class="text-muted">{{ item.submission.exam.subject|default:"No subject" }}</small>
+                                            </td>
+                                            <td>
+                                                <div class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ item.submission.submitted_at|date:"M d, Y H:i" }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if item.total_score is not None %}
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="badge {% if item.percentage >= 80 %}bg-success{% elif item.percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %} me-2">
+                                                            {{ item.percentage }}%
+                                                        </span>
+                                                        <small class="text-muted">{{ item.total_score }}/{{ item.max_total_score }}</small>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Not Evaluated</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if item.proctoring_session %}
+                                                    {% if item.exam_terminated %}
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-ban me-1"></i>
+                                                            Terminated
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-shield-alt me-1"></i>
+                                                            Active
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-question me-1"></i>
+                                                        No Data
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if item.violation_count > 0 %}
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        {{ item.violation_count }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i>
+                                                        0
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if item.exam_terminated %}
+                                                    <span class="text-danger fw-medium">
+                                                        <i class="fas fa-times-circle me-1"></i>
+                                                        Terminated
+                                                    </span>
+                                                {% elif item.violation_count > 0 %}
+                                                    <span class="text-warning fw-medium">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        Violations
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-success fw-medium">
+                                                        <i class="fas fa-check-circle me-1"></i>
+                                                        Clean
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" onclick="showSubmissionDetails({{ item.submission.id }})">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    {% if request.user.role == 'teacher' %}
+                                                        <button class="btn btn-outline-info" onclick="showProctoringDetails({{ item.submission.id }})">
+                                                            <i class="fas fa-shield-alt"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No exam submissions found</h5>
+                            <p class="text-muted">Students haven't submitted any exams yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submission Details Modal -->
+<div class="modal fade" id="submissionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exam Submission Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="submissionDetailsContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Proctoring Details Modal -->
+<div class="modal fade" id="proctoringDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Proctoring Session Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="proctoringDetailsContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showSubmissionDetails(submissionId) {
+    fetch(`/evaluation/submission-details/${submissionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const content = document.getElementById('submissionDetailsContent');
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Student Information</h6>
+                        <p><strong>Name:</strong> ${data.student_name}</p>
+                        <p><strong>Email:</strong> ${data.student_email}</p>
+                        <p><strong>Submitted:</strong> ${data.submitted_at}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Exam Information</h6>
+                        <p><strong>Exam:</strong> ${data.exam_title}</p>
+                        <p><strong>Subject:</strong> ${data.exam_subject || 'N/A'}</p>
+                        <p><strong>Duration:</strong> ${data.duration}</p>
+                    </div>
+                </div>
+                <hr>
+                <h6>Answers & Evaluations</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Question</th>
+                                <th>Answer</th>
+                                <th>Score</th>
+                                <th>Max Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.answers.map(answer => `
+                                <tr>
+                                    <td>${answer.question_text}</td>
+                                    <td>${answer.answer_text}</td>
+                                    <td>${answer.score || 'N/A'}</td>
+                                    <td>${answer.max_score || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            new bootstrap.Modal(document.getElementById('submissionDetailsModal')).show();
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function showProctoringDetails(submissionId) {
+    fetch(`/evaluation/proctoring-details/${submissionId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const content = document.getElementById('proctoringDetailsContent');
+            
+            let eventsHtml = '';
+            if (data.events && data.events.length > 0) {
+                eventsHtml = `
+                    <h6>Proctoring Events</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event Type</th>
+                                    <th>Description</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.events.map(event => `
+                                    <tr>
+                                        <td>${event.timestamp}</td>
+                                        <td>
+                                            <span class="badge bg-${event.severity === 'high' ? 'danger' : event.severity === 'medium' ? 'warning' : 'info'}">
+                                                ${event.event_type}
+                                            </span>
+                                        </td>
+                                        <td>${event.description}</td>
+                                        <td>${event.severity}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                eventsHtml = '<p class="text-muted">No proctoring events recorded.</p>';
+            }
+            
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Session Information</h6>
+                        <p><strong>Session ID:</strong> ${data.session_id || 'N/A'}</p>
+                        <p><strong>Status:</strong> ${data.session_status || 'N/A'}</p>
+                        <p><strong>Started:</strong> ${data.started_at || 'N/A'}</p>
+                        <p><strong>Ended:</strong> ${data.ended_at || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>System Information</h6>
+                        <p><strong>IP Address:</strong> ${data.ip_address || 'N/A'}</p>
+                        <p><strong>Browser:</strong> ${data.browser || 'N/A'}</p>
+                        <p><strong>Screen Resolution:</strong> ${data.screen_resolution || 'N/A'}</p>
+                        <p><strong>Platform:</strong> ${data.platform || 'N/A'}</p>
+                    </div>
+                </div>
+                <hr>
+                ${eventsHtml}
+            `;
+            new bootstrap.Modal(document.getElementById('proctoringDetailsModal')).show();
+        })
+        .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block title %}Analysis Result: {{ pdf_document.title }} - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'pdf_list' %}">PDF Documents</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'pdf_detail' pdf_document.pk %}">{{ pdf_document.title }}</a></li>
+                    <li class="breadcrumb-item active">Analysis</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">
+                <i class="fas fa-chart-line text-primary me-2"></i>AI Analysis Report
+            </h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{% url 'pdf_export' pdf_document.pk %}" class="btn btn-outline-primary">
+                    <i class="fas fa-download me-1"></i>Export JSON
+                </a>
+                <form method="post" action="{% url 'pdf_reanalyze' pdf_document.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="fas fa-sync me-1"></i>Re-analyze
+                    </button>
+                </form>
+                <form method="post" action="{% url 'pdf_delete' pdf_document.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this PDF document?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small mb-1">OCR Confidence</div>
+                <h3 class="text-primary mb-0">{{ analysis_result.ocr_confidence|floatformat:1 }}%</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small mb-1">Processing Time</div>
+                <h3 class="text-success mb-0">{{ analysis_result.processing_time|floatformat:2 }}s</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small mb-1">Words Detected</div>
+                <h3 class="text-info mb-0">{{ analysis_result.word_count }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3 h-100">
+                <div class="text-muted small mb-1">Questions Extracted</div>
+                <h3 class="text-warning mb-0">{{ analysis_result.question_count }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Detailed Analysis -->
+        <div class="col-lg-8">
+            <!-- Summary Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-quote-left me-2 text-primary"></i>AI Generated Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead mb-0">{{ analysis_result.auto_summary }}</p>
+                </div>
+            </div>
+
+            <!-- Key Points -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-list-ul me-2 text-primary"></i>Key Points & Insights</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for point in analysis_result.key_points %}
+                            <li class="list-group-item px-0">
+                                <i class="fas fa-check-circle text-success me-2"></i>{{ point }}
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item px-0 text-muted italic">No key points extracted.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Extracted Questions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle me-2 text-primary"></i>Extracted Questions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Question Text</th>
+                                    <th>Type</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for question in questions %}
+                                    <tr>
+                                        <td>{{ question.question_text }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ question.get_question_type_display }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 5px; width: 50px;">
+                                                <div class="progress-bar bg-success" style="width: 85%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">No questions detected in this document.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extracted Text -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2 text-primary"></i>Full Extracted Text (OCR)</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyText()">
+                        <i class="fas fa-copy me-1"></i>Copy
+                    </button>
+                </div>
+                <div class="card-body">
+                    <pre id="extracted-text" class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;">{{ analysis_result.extracted_text }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Sidebar Analysis -->
+        <div class="col-lg-4">
+            <!-- Sentiment Analysis -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3">Overall Sentiment</h6>
+                    <div class="mb-2">
+                        {% if analysis_result.sentiment_label == 'positive' %}
+                            <i class="fas fa-smile fa-4x text-success"></i>
+                        {% elif analysis_result.sentiment_label == 'negative' %}
+                            <i class="fas fa-frown fa-4x text-danger"></i>
+                        {% else %}
+                            <i class="fas fa-meh fa-4x text-warning"></i>
+                        {% endif %}
+                    </div>
+                    <h4 class="text-capitalize">{{ analysis_result.sentiment_label }}</h4>
+                    <p class="text-muted small">Score: {{ analysis_result.sentiment_score|floatformat:2 }}</p>
+                </div>
+            </div>
+
+            <!-- Topics & Keywords -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-tags me-2 text-primary"></i>Topics & Keywords</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Main Topics</h6>
+                    <div class="mb-3">
+                        {% for topic in analysis_result.main_topics %}
+                            <span class="badge bg-primary me-1 mb-1">{{ topic }}</span>
+                        {% endfor %}
+                    </div>
+                    <hr>
+                    <h6>Keywords</h6>
+                    <div>
+                        {% for keyword in analysis_result.keywords %}
+                            <span class="badge bg-light text-dark border me-1 mb-1">{{ keyword }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Readability & Complexity -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-brain me-2 text-primary"></i>Readability</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted d-block">Readability Score (Flesch)</label>
+                        <div class="d-flex align-items-center">
+                            <h4 class="mb-0 me-3">{{ analysis_result.readability_score|floatformat:1 }}</h4>
+                            <div class="progress flex-grow-1" style="height: 8px;">
+                                <div class="progress-bar bg-info" style="width: {{ analysis_result.readability_score }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="small text-muted d-block">Complexity Score</label>
+                        <div class="d-flex align-items-center">
+                            <h4 class="mb-0 me-3">{{ analysis_result.complexity_score|floatformat:1 }}</h4>
+                            <div class="progress flex-grow-1" style="height: 8px;">
+                                <div class="progress-bar bg-warning" style="width: {{ analysis_result.complexity_score|floatformat:0 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Logs -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>System Logs</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                        {% for log in logs %}
+                            <div class="list-group-item py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-{{ log.log_level|yesno:'info,warning,danger,info' }}">{{ log.log_level|upper }}</span>
+                                    <span class="small text-muted">{{ log.timestamp|date:"H:i:s" }}</span>
+                                </div>
+                                <p class="small mb-0">{{ log.message }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyText() {
+    const text = document.getElementById('extracted-text').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Text copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

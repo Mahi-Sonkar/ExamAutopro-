@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Evaluation Results - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-robot me-2"></i>Evaluation Results</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if evaluations %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Exam</th>
+                            <th>Question</th>
+                            <th>Initial Score</th>
+                            <th>Final Score</th>
+                            <th>Grace Marks</th>
+                            <th>Confidence</th>
+                            <th>Evaluated At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for evaluation in evaluations %}
+                            <tr>
+                                <td>{{ evaluation.answer.submission.student.email }}</td>
+                                <td>{{ evaluation.answer.question.exam.title }}</td>
+                                <td>{{ evaluation.answer.question.question_text|truncatewords:10 }}</td>
+                                <td>{{ evaluation.initial_score }}</td>
+                                <td>
+                                    <span class="badge bg-{{ evaluation.final_score|yesno:'success,warning,danger' }}">
+                                        {{ evaluation.final_score }}
+                                    </span>
+                                </td>
+                                <td>+{{ evaluation.grace_marks_applied }}</td>
+                                <td>{{ evaluation.confidence_score|floatformat:2 }}</td>
+                                <td>{{ evaluation.evaluated_at|date:"M d, H:i" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                <h5>No Evaluation Results</h5>
+                <p class="text-muted">Evaluation results will appear here once students submit exams.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

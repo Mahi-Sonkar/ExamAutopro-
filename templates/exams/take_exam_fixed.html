@@ -1,0 +1,78 @@
+// Function to check if all questions are answered
+function checkAllAnswers() {
+    const questions = document.querySelectorAll('[data-question-id]');
+    let allAnswered = true;
+    let unansweredQuestions = [];
+    
+    questions.forEach(question => {
+        const questionId = question.getAttribute('data-question-id');
+        let isAnswered = false;
+        
+        // Check different question types
+        if (question.type === 'radio') {
+            const radioInputs = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
+            isAnswered = radioInputs.length > 0;
+        } else if (question.type === 'textarea') {
+            const textArea = document.querySelector(`textarea[name="question_${questionId}"]`);
+            isAnswered = textArea && textArea.value.trim() !== '';
+        } else if (question.type === 'file') {
+            const fileInput = document.querySelector(`input[name="file_${questionId}"]`);
+            isAnswered = fileInput && fileInput.files.length > 0;
+        }
+        
+        if (!isAnswered) {
+            unansweredQuestions.push(questionId);
+            allAnswered = false;
+        }
+    });
+    
+    // Update submit button state
+    const submitButton = document.querySelector('button[onclick="showSubmitModal()"]');
+    if (submitButton) {
+        if (allAnswered) {
+            submitButton.disabled = false;
+            submitButton.classList.remove('disabled');
+            submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Exam';
+        } else {
+            submitButton.disabled = true;
+            submitButton.classList.add('disabled');
+            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Please answer all questions';
+        }
+    }
+    
+    return allAnswered;
+}
+
+// Function to submit exam form from modal
+function submitExamForm() {
+    // Check all answers before submission
+    if (!checkAllAnswers()) {
+        alert('Please answer all questions before submitting the exam.');
+        return false;
+    }
+    
+    try {
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('submitModal'));
+        if (modal) {
+            modal.hide();
+        } else {
+            // Fallback: manually hide modal
+            const modalElement = document.getElementById('submitModal');
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+            document.body.classList.remove('modal-open');
+            
+            // Remove backdrop
+            const backdrop = document.getElementById('modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        }
+    } catch (error) {
+        console.log('Modal close error:', error);
+    }
+    
+    // Submit form
+    document.getElementById('exam-form').submit();
+}

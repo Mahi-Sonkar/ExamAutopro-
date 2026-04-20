@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome to ExamAutoPro - AI-Powered Examination System{% endblock %}
+
+{% block content %}
+<div class="hero-section bg-primary text-white py-5 mb-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">ExamAutoPro</h1>
+                <h2 class="h3 mb-4">AI-Powered Examination Evaluation System</h2>
+                <p class="lead mb-4">
+                    Transform traditional examination evaluation with advanced AI technology. 
+                    Eliminate manual checking limitations, provide fast and accurate results, 
+                    and ensure exam integrity through AI-powered proctoring.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                        </a>
+                        {% if user.is_teacher %}
+                            <a href="{% url 'exam_create' %}" class="btn btn-outline-light btn-lg">
+                                <i class="fas fa-plus me-2"></i>Create Exam
+                            </a>
+                        {% endif %}
+                        {% if user.is_student %}
+                            <a href="{% url 'exam_list' %}" class="btn btn-outline-light btn-lg">
+                                <i class="fas fa-clipboard-list me-2"></i>View Exams
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'register' %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Get Started
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <i class="fas fa-graduation-cap display-1"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Access Links Section -->
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-0">
+                    <h3 class="h5 mb-0 fw-bold">
+                        <i class="fas fa-link me-2"></i>Quick Access Links
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        {% if user.is_authenticated %}
+                            <!-- Authenticated User Links -->
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <a href="{% url 'dashboard' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-tachometer-alt fa-2x mb-2"></i>
+                                    <span class="fw-bold">Dashboard</span>
+                                    <small class="text-muted">Overview & Analytics</small>
+                                </a>
+                            </div>
+                            
+                            {% if user.is_teacher %}
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'exam_list' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                                        <span class="fw-bold">My Exams</span>
+                                        <small class="text-muted">Manage Exams</small>
+                                    </a>
+                                </div>
+                                
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'exam_create' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-plus fa-2x mb-2"></i>
+                                        <span class="fw-bold">Create Exam</span>
+                                        <small class="text-muted">New Examination</small>
+                                    </a>
+                                </div>
+                                
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'pdf_list' %}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-file-pdf fa-2x mb-2"></i>
+                                        <span class="fw-bold">PDF Analysis</span>
+                                        <small class="text-muted">Document Processing</small>
+                                    </a>
+                                </div>
+                            {% elif user.is_student %}
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'exam_list' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                                        <span class="fw-bold">Available Exams</span>
+                                        <small class="text-muted">Take Exams</small>
+                                    </a>
+                                </div>
+                                
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'dashboard' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                        <span class="fw-bold">My Results</span>
+                                        <small class="text-muted">Performance</small>
+                                    </a>
+                                </div>
+                            {% elif user.is_admin_user %}
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'exam_list' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                                        <span class="fw-bold">All Exams</span>
+                                        <small class="text-muted">Manage All</small>
+                                    </a>
+                                </div>
+                                
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="{% url 'pdf_list' %}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-file-pdf fa-2x mb-2"></i>
+                                        <span class="fw-bold">PDF Analysis</span>
+                                        <small class="text-muted">Document Processing</small>
+                                    </a>
+                                </div>
+                                
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <a href="/admin/" class="btn btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <i class="fas fa-cog fa-2x mb-2"></i>
+                                        <span class="fw-bold">Admin Panel</span>
+                                        <small class="text-muted">System Settings</small>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <!-- Guest User Links -->
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <a href="{% url 'register' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-user-plus fa-2x mb-2"></i>
+                                    <span class="fw-bold">Register</span>
+                                    <small class="text-muted">Create Account</small>
+                                </a>
+                            </div>
+                            
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <a href="{% url 'login' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-sign-in-alt fa-2x mb-2"></i>
+                                    <span class="fw-bold">Login</span>
+                                    <small class="text-muted">Access System</small>
+                                </a>
+                            </div>
+                            
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <a href="#features" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                    <span class="fw-bold">Features</span>
+                                    <small class="text-muted">Learn More</small>
+                                </a>
+                            </div>
+                            
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <a href="#how-it-works" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                    <i class="fas fa-question-circle fa-2x mb-2"></i>
+                                    <span class="fw-bold">How It Works</span>
+                                    <small class="text-muted">Get Started</small>
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div id="features" class="container py-5">
+    <div class="row">
+        <div class="col-lg-12 text-center mb-5">
+            <h2 class="fw-bold">Key Features</h2>
+            <p class="text-muted">Comprehensive solution for modern examination management</p>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon text-primary mb-3">
+                    <i class="fas fa-robot fa-3x"></i>
+                </div>
+                <h5>AI Evaluation</h5>
+                <p class="text-muted">Advanced NLP and OCR for accurate answer evaluation</p>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon text-success mb-3">
+                    <i class="fas fa-video fa-3x"></i>
+                </div>
+                <h5>Online Proctoring</h5>
+                <p class="text-muted">Real-time monitoring with tab-switch and face detection</p>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon text-info mb-3">
+                    <i class="fas fa-users fa-3x"></i>
+                </div>
+                <h5>Role-Based Access</h5>
+                <p class="text-muted">Separate interfaces for Admins, Teachers, and Students</p>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon text-warning mb-3">
+                    <i class="fas fa-chart-line fa-3x"></i>
+                </div>
+                <h5>Analytics Dashboard</h5>
+                <p class="text-muted">Comprehensive reporting and performance insights</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div id="how-it-works" class="bg-light py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center mb-5">
+                <h2 class="fw-bold">How It Works</h2>
+                <p class="text-muted">Simple 4-step process for seamless examination management</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="step-number bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    1
+                </div>
+                <h5>Create Account</h5>
+                <p class="text-muted">Register as Teacher, Student, or Admin to get started</p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="step-number bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    2
+                </div>
+                <h5>Setup Exams</h5>
+                <p class="text-muted">Teachers create exams with multiple question types and settings</p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="step-number bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    3
+                </div>
+                <h5>Take Exams</h5>
+                <p class="text-muted">Students take exams with AI-powered proctoring</p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="step-number bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    4
+                </div>
+                <h5>Get Results</h5>
+                <p class="text-muted">Instant AI evaluation with detailed analytics and insights</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action Section -->
+<div class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-4">Ready to Transform Your Examination Process?</h2>
+        <p class="lead mb-4">Join thousands of educators and students using ExamAutoPro for smarter examinations</p>
+        
+        {% if not user.is_authenticated %}
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="{% url 'register' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Start Free Trial
+                </a>
+                <a href="#features" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-info-circle me-2"></i>Learn More
+                </a>
+            </div>
+        {% else %}
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                </a>
+                {% if user.is_teacher %}
+                    <a href="{% url 'exam_create' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-plus me-2"></i>Create New Exam
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.feature-icon {
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.feature-icon:hover {
+    opacity: 1;
+    transform: translateY(-5px);
+}
+
+.step-number {
+    transition: all 0.3s ease;
+}
+
+.step-number:hover {
+    transform: scale(1.1);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-success:hover,
+.btn-outline-info:hover,
+.btn-outline-warning:hover,
+.btn-outline-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}

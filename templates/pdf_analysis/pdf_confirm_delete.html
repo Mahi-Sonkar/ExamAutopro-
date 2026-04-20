@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete: {{ pdf_document.title }} - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-file-pdf fa-4x text-danger opacity-25"></i>
+                    </div>
+                    <p class="lead">Are you sure you want to delete this document?</p>
+                    <h4 class="mb-4 text-primary">{{ pdf_document.title }}</h4>
+                    <p class="text-muted mb-4">
+                        This action will permanently delete the PDF file and all its associated analysis results, extracted questions, and logs. This action cannot be undone.
+                    </p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash me-2"></i>Permanently Delete
+                            </button>
+                            <a href="{% url 'pdf_detail' pdf_document.pk %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel & Keep File
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

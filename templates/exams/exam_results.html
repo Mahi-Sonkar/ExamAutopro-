@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load exam_extras %}
+
+{% block title %}Exam Results - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm mb-5">
+                <div class="card-header bg-white py-4 border-0 text-center">
+                    <h1 class="h3 fw-bold mb-2">Exam Results: {{ exam.title }}</h1>
+                    <p class="text-muted mb-0">Submitted on {{ submission.submitted_at|date:"M d, Y H:i" }}</p>
+                </div>
+                <div class="card-body p-5 border-top">
+                    <div class="row text-center mb-5">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="small text-muted text-uppercase fw-bold mb-1">Score</div>
+                                <div class="h2 fw-bold mb-0 text-primary">{{ submission.total_marks_obtained }} / {{ exam.total_marks }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="small text-muted text-uppercase fw-bold mb-1">Percentage</div>
+                                <div class="h2 fw-bold mb-0 {% if submission.percentage >= 40 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ submission.percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="small text-muted text-uppercase fw-bold mb-1">Status</div>
+                                <div class="h2 fw-bold mb-0 text-info text-capitalize">{{ submission.get_status_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 class="fw-bold mb-4">Detailed Analysis</h4>
+                    {% for answer in submission.answers.all %}
+                        <div class="answer-card mb-4 p-4 border rounded-3 {% if answer.is_correct %}border-success-subtle bg-success-light{% elif answer.question.question_type == 'mcq' %}border-danger-subtle bg-danger-light{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="fw-bold mb-0">Q{{ forloop.counter }}: {{ answer.question.question_text }}</h5>
+                                <span class="badge {% if answer.marks_obtained > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ answer.marks_obtained }} / {{ answer.question.marks }} Marks
+                                </span>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="small text-muted fw-bold mb-1">Your Answer:</div>
+                                <div class="p-3 bg-white border rounded">
+                                    {% if answer.question.question_type == 'mcq' or answer.question.question_type == 'true_false' %}
+                                        {{ answer.selected_option.option_text }}
+                                        {% if answer.is_correct %}
+                                            <i class="fas fa-check-circle text-success ms-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-danger ms-2"></i>
+                                        {% endif %}
+                                    {% else %}
+                                        {{ answer.answer_text|linebreaks }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if answer.question.question_type == 'mcq' or answer.question.question_type == 'true_false' %}
+                                {% if not answer.is_correct %}
+                                    <div class="mb-3">
+                                        <div class="small text-muted fw-bold mb-1 text-success">Correct Answer:</div>
+                                        <div class="p-3 bg-white border border-success rounded text-success">
+                                            {% for option in answer.question.options.all %}
+                                                {% if option.is_correct %}{{ option.option_text }}{% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                                    </div>
+                    {% endfor %}
+
+                    <div class="text-center mt-5">
+                        <a href="{% url 'exam_list' %}" class="btn btn-outline-primary px-5">Back to Exams</a>
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary px-5 ms-3">Go to Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .answer-card {
+        transition: transform 0.2s;
+    }
+    .answer-card:hover {
+        transform: translateX(5px);
+    }
+    .bg-success-light { background-color: #f8fff9; }
+    .bg-danger-light { background-color: #fff8f8; }
+    .italic { font-style: italic; }
+</style>
+{% endblock %}

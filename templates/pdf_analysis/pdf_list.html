@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+
+{% block title %}PDF Documents - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-3">
+                        <i class="fas fa-file-pdf text-danger me-3"></i>
+                        My PDF Documents
+                    </h1>
+                    <p class="text-muted mb-0">All uploaded PDF documents with analysis status</p>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if request.user.role == 'teacher' %}
+                        <a href="{% url 'evaluation:scoring_range_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-cogs me-2"></i>Scoring Rules
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'pdf_upload' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Upload New PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Section -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body bg-light rounded">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="{{ search_form.query.id_for_label }}" class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" name="query" class="form-control border-start-0" placeholder="Search by title or description..." value="{{ request.GET.query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Document Type</label>
+                    <select name="document_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="exam_paper" {% if request.GET.document_type == 'exam_paper' %}selected{% endif %}>Exam Paper</option>
+                        <option value="question_bank" {% if request.GET.document_type == 'question_bank' %}selected{% endif %}>Question Bank</option>
+                        <option value="study_material" {% if request.GET.document_type == 'study_material' %}selected{% endif %}>Study Material</option>
+                        <option value="answer_sheet" {% if request.GET.document_type == 'answer_sheet' %}selected{% endif %}>Answer Sheet</option>
+                        <option value="other" {% if request.GET.document_type == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="analysis_status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if request.GET.analysis_status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="processing" {% if request.GET.analysis_status == 'processing' %}selected{% endif %}>Processing</option>
+                        <option value="completed" {% if request.GET.analysis_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="failed" {% if request.GET.analysis_status == 'failed' %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'pdf_list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Professional Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 bg-primary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">{{ pdf_documents.count }}</h3>
+                            <p class="mb-0">Total Documents</p>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">{{ completed_docs }}</h3>
+                            <p class="mb-0">Completed</p>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-warning text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">{{ processing_docs }}</h3>
+                            <p class="mb-0">Processing</p>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-info text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">{{ pending_docs }}</h3>
+                            <p class="mb-0">Pending</p>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional PDF List -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>PDF Documents
+                <span class="badge bg-secondary ms-2">{{ pdf_documents.count }} documents</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if pdf_documents %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Document</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Uploaded</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for document in pdf_documents %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fas fa-file-pdf text-danger fs-3"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fw-bold">{{ document.title }}</h6>
+                                                <small class="text-muted">{{ document.file_size|filesizeformat }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ document.get_document_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if document.analysis_status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Completed
+                                            </span>
+                                        {% elif document.analysis_status == 'processing' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-spinner fa-spin me-1"></i>Processing
+                                            </span>
+                                        {% elif document.analysis_status == 'failed' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Failed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-clock me-1"></i>Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <small class="text-muted d-block">{{ document.uploaded_at|date:"M d, Y" }}</small>
+                                            <small class="text-muted">{{ document.uploaded_by.username }}</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group">
+                                            <a href="{% url 'pdf_detail' document.pk %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if document.analysis_status == 'completed' %}
+                                                <a href="{% url 'pdf_analysis' document.pk %}" class="btn btn-sm btn-outline-success" title="View Analysis">
+                                                    <i class="fas fa-chart-bar"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'pdf_export' document.pk %}" class="btn btn-sm btn-outline-info" title="Export Results">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <a href="{% url 'pdf_delete' document.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirmDelete('{{ document.title|escapejs }}')" title="Delete Document">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-file-pdf text-muted fa-4x opacity-25"></i>
+                    </div>
+                    <h4 class="text-muted">No PDF documents found</h4>
+                    <p class="text-muted mb-4">Upload your first PDF document to get started with AI-powered analysis.</p>
+                    <a href="{% url 'pdf_upload' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus me-2"></i>Upload Your First PDF
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Professional Pagination -->
+    {% if is_paginated %}
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <div>
+                <p class="text-muted small">
+                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} documents
+                </p>
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "<span id="documentTitle" class="fw-bold"></span>"?</p>
+                <p class="text-danger small"><i class="fas fa-exclamation-triangle me-1"></i>This action cannot be undone and all associated analysis data will be lost.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Document</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * Immediate delete confirmation using a simple browser confirm.
+ * Used as a fallback or direct action.
+ */
+function confirmDeleteImmediate(documentId, documentTitle) {
+    const documentTitleSpan = document.getElementById('documentTitle');
+    if (documentTitleSpan) documentTitleSpan.textContent = documentTitle;
+    
+    const deleteForm = document.getElementById('deleteForm');
+    if (deleteForm) {
+        deleteForm.action = `/pdf/${documentId}/delete/`;
+        
+        // Try to show Bootstrap modal first
+        const deleteModal = document.getElementById('deleteModal');
+        if (typeof bootstrap !== 'undefined' && deleteModal) {
+            try {
+                const modal = new bootstrap.Modal(deleteModal);
+                modal.show();
+                return;
+            } catch (e) {
+                console.warn('Bootstrap Modal failed, using browser confirm', e);
+            }
+        }
+        
+        // Fallback to native confirm
+        if (confirm(`Are you sure you want to delete "${documentTitle}"?`)) {
+            deleteForm.submit();
+        }
+    }
+}
+
+function confirmDelete(documentTitle) {
+    return confirm(`Are you sure you want to delete "${documentTitle}"? This action cannot be undone.`);
+}
+</script>
+{% endblock %}

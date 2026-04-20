@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Teacher Dashboard - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-tachometer-alt text-primary me-2"></i>
+                    Teacher Dashboard
+                </h1>
+                <div>
+                    <span class="text-muted me-3">Welcome back, {{ user.email }}</span>
+                    <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h4 class="text-primary mb-1">{{ stats.total_exams }}</h4>
+                            <small class="text-muted">Total Exams</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h4 class="text-success mb-1">{{ stats.published_exams }}</h4>
+                            <small class="text-muted">Published Exams</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h4 class="text-info mb-1">{{ stats.total_submissions }}</h4>
+                            <small class="text-muted">Total Submissions</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h4 class="text-warning mb-1">{{ stats.pending_evaluations }}</h4>
+                            <small class="text-muted">Pending Evaluations</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/exams/create/" class="btn btn-primary">
+                                            <i class="fas fa-plus me-2"></i>Create Exam
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/evaluation/results/" class="btn btn-success">
+                                            <i class="fas fa-robot me-2"></i>Evaluate Answers
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/evaluation/scoring-ranges/" class="btn btn-warning">
+                                            <i class="fas fa-sliders-h me-2"></i>Scoring Ranges
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a href="/pdf/" class="btn btn-info">
+                                            <i class="fas fa-file-pdf me-2"></i>PDF Analysis
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Exams -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Recent Exams</h5>
+                            <a href="/exams/" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_exams %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Exam Title</th>
+                                                <th>Type</th>
+                                                <th>Status</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for exam in recent_exams %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ exam.title }}</strong>
+                                                        {% if exam.description %}
+                                                            <br><small class="text-muted">{{ exam.description|truncatechars:50 }}</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">{{ exam.get_exam_type_display }}</span>
+                                                    </td>
+                                                    <td>
+                                                        {% if exam.status == 'published' %}
+                                                            <span class="badge bg-success">Published</span>
+                                                        {% elif exam.status == 'draft' %}
+                                                            <span class="badge bg-warning">Draft</span>
+                                                        {% else %}
+                                                            <span class="badge bg-info">{{ exam.get_status_display }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">{{ exam.created_at|date:"M d, Y" }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <a href="/exams/{{ exam.pk }}/" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <a href="/exams/{{ exam.pk }}/edit/" class="btn btn-sm btn-outline-secondary">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Exams Yet</h5>
+                                    <p class="text-muted">Create your first exam to get started.</p>
+                                    <a href="/exams/create/" class="btn btn-primary">
+                                        <i class="fas fa-plus-circle me-1"></i>Create Your First Exam
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="card-title mb-0">Performance Overview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Average Score</span>
+                                    <strong>{{ stats.avg_score }}%</strong>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-success" style="width: {{ stats.avg_score }}%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Active Sessions</span>
+                                    <strong>{{ stats.active_sessions }}</strong>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-info" style="width: {{ stats.active_sessions|default:0 }}%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Scoring Ranges</span>
+                                    <strong>{{ stats.scoring_ranges_count }}</strong>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-warning" style="width: {{ stats.scoring_ranges_count|default:0 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts -->
+                    {% if recent_alerts %}
+                        <div class="card shadow-sm mt-4">
+                            <div class="card-header bg-white">
+                                <h5 class="card-title mb-0">Recent Alerts</h5>
+                            </div>
+                            <div class="card-body">
+                                {% for alert in recent_alerts %}
+                                    <div class="alert alert-warning alert-sm mb-2">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ alert.description|default:"Suspicious activity detected" }}
+                                        </small>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted small mb-0">No recent alerts</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

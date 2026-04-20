@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ exam.title }} - Exam Details{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="h5 fw-bold mb-3">Exam Details</h3>
+                    <div class="mb-2"><strong>Type:</strong> {{ exam.get_exam_type_display }}</div>
+                    <div class="mb-2"><strong>Duration:</strong> {{ exam.duration }} mins</div>
+                    <div class="mb-2"><strong>Total Marks:</strong> {{ exam.total_marks }}</div>
+                    <div class="mb-2"><strong>Status:</strong> <span class="badge bg-{{ exam.status_color }}">{{ exam.get_status_display }}</span></div>
+                    <div class="mb-2"><strong>Start:</strong> {{ exam.start_time|date:"M d, Y H:i" }}</div>
+                    <div class="mb-2"><strong>End:</strong> {{ exam.end_time|date:"M d, Y H:i" }}</div>
+                    <hr>
+                    
+                    {% if exam.status == 'draft' %}
+                        <div class="d-grid gap-2 mb-3">
+                            <form action="{% url 'publish_exam' exam.pk %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-paper-plane me-2"></i>Publish Exam
+                                </button>
+                            </form>
+                        </div>
+                    {% elif exam.status == 'published' %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Share with Students:</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control form-control-sm" id="share-link" 
+                                       value="{{ request.scheme }}://{{ request.get_host }}{% url 'take_exam' exam.id %}" readonly>
+                                <button class="btn btn-outline-secondary btn-sm" type="button" id="copy-link">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <div id="copy-msg" class="small text-success mt-1" style="display: none;">Link copied!</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2">
+                        {% if user.is_teacher and user == exam.teacher %}
+                            <a href="{% url 'exam_update' exam.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-2"></i>Edit Details
+                            </a>
+                        {% endif %}
+                        {% if user.is_teacher and user == exam.teacher %}
+                            <a href="{% url 'create_question' exam.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add Question
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="h5 fw-bold mb-3">Instructions</h3>
+                    <p class="text-muted">{{ exam.instructions|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <h3 class="h5 mb-0 fw-bold">Questions ({{ questions.count }})</h3>
+                    <button class="btn btn-primary btn-sm" id="show-add-question">
+                        <i class="fas fa-plus me-2"></i>Add Question
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Google Forms Style Question Builder (Hidden by default) -->
+                    <div id="question-builder" class="mb-5 p-4 bg-white rounded-3 shadow-sm border border-primary" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0 text-primary">New Question</h5>
+                            <button type="button" class="btn-close" id="hide-add-question"></button>
+                        </div>
+                        
+                        <form action="{% url 'create_question' exam.id %}" method="post" enctype="multipart/form-data" id="dynamic-question-form">
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                {{ question_form.question_text }}
+                                {% if question_form.question_text.errors %}
+                                    <div class="invalid-feedback d-block">{{ question_form.question_text.errors|first }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label small text-muted">Question Type</label>
+                                    {{ question_form.question_type }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label small text-muted">Marks</label>
+                                    {{ question_form.marks }}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label small text-muted">Order</label>
+                                    {{ question_form.order }}
+                                </div>
+                            </div>
+
+                            <!-- Options Section (for MCQ) -->
+                            <div id="builder-options-section" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0">Options</h6>
+                                    <span class="text-muted small">Mark correct answer(s)</span>
+                                </div>
+                                {{ option_formset.management_form }}
+                                <div id="builder-formset-container">
+                                    {% for option_form in option_formset %}
+                                        <div class="builder-option-row mb-2 d-flex align-items-center gap-2">
+                                            {{ option_form.id }}
+                                            <div class="form-check">
+                                                {{ option_form.is_correct }}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                {{ option_form.option_text }}
+                                            </div>
+                                            <div style="width: 60px;">
+                                                {{ option_form.order }}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <button type="button" class="btn btn-link btn-sm p-0 mt-2 text-decoration-none" id="builder-add-option">
+                                    <i class="fas fa-plus-circle me-1"></i>Add Option
+                                </button>
+                            </div>
+
+                            <!-- Descriptive Section -->
+                            <div id="builder-descriptive-section" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted fw-bold">Model Answer</label>
+                                    {{ question_form.model_answer }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted fw-bold">Keywords</label>
+                                    {{ question_form.keywords }}
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                <div class="d-flex gap-3">
+                                    <div class="form-check form-switch">
+                                        {{ question_form.required }}
+                                        <label class="form-check-label small" for="{{ question_form.required.id_for_label }}">Required</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        {{ question_form.has_image }}
+                                        <label class="form-check-label small" for="{{ question_form.has_image.id_for_label }}">Image</label>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-light btn-sm px-3" id="cancel-builder">Cancel</button>
+                                    <button type="submit" class="btn btn-primary btn-sm px-4">Save Question</button>
+                                </div>
+                            </div>
+                            
+                            <div id="builder-image-upload" class="mt-3" style="display: none;">
+                                {{ question_form.question_image }}
+                            </div>
+                        </form>
+                    </div>
+
+                    {% if questions %}
+                        {% for question in questions %}
+                            <div class="question-card mb-4 pb-4 border-bottom last-child-no-border">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted fw-bold small">QUESTION {{ forloop.counter }}</span>
+                                    <span class="badge bg-light text-dark">{{ question.marks }} Marks</span>
+                                </div>
+                                <h5 class="fw-bold mb-3">{{ question.question_text|linebreaks }}</h5>
+                                <div class="mb-3">
+                                    <span class="badge bg-info text-dark me-2">{{ question.get_question_type_display }}</span>
+                                    {% if question.required %}<span class="badge bg-warning text-dark">Required</span>{% endif %}
+                                </div>
+                                
+                                {% if question.question_type == 'mcq' or question.question_type == 'true_false' %}
+                                    <ul class="list-group list-group-flush mb-3">
+                                        {% for option in question.options.all %}
+                                            <li class="list-group-item px-0 py-2 border-0 d-flex align-items-center">
+                                                <i class="fas {% if option.is_correct %}fa-check-circle text-success{% else %}fa-circle text-light{% endif %} me-3"></i>
+                                                {{ option.option_text }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                
+                                {% if question.model_answer %}
+                                    <div class="mt-3 p-3 bg-light rounded-3">
+                                        <div class="small fw-bold text-uppercase text-muted mb-1">Model Answer:</div>
+                                        <div class="text-dark">{{ question.model_answer|linebreaks }}</div>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if question.keywords %}
+                                    <div class="mt-2">
+                                        <span class="small fw-bold text-muted">Keywords:</span>
+                                        <span class="text-muted italic small">{{ question.keywords }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-question-circle fa-4x text-light mb-4"></i>
+                            <h4 class="text-muted">No questions yet</h4>
+                            <p class="text-muted mb-4">Start by adding your first question to this exam.</p>
+                            <a href="{% url 'create_question' exam.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add Question
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const showBtn = document.getElementById('show-add-question');
+        const hideBtn = document.getElementById('hide-add-question');
+        const cancelBtn = document.getElementById('cancel-builder');
+        const builder = document.getElementById('question-builder');
+        const questionTypeSelect = document.getElementById('{{ question_form.question_type.id_for_label }}');
+        const optionsSection = document.getElementById('builder-options-section');
+        const descriptiveSection = document.getElementById('builder-descriptive-section');
+        const hasImageCheckbox = document.getElementById('{{ question_form.has_image.id_for_label }}');
+        const imageUploadSection = document.getElementById('builder-image-upload');
+        const addOptionBtn = document.getElementById('builder-add-option');
+        const formsetContainer = document.getElementById('builder-formset-container');
+        const totalForms = document.getElementById('id_options-TOTAL_FORMS');
+
+        function toggleBuilder(show) {
+            builder.style.display = show ? 'block' : 'none';
+            if (show) builder.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleSections() {
+            const type = questionTypeSelect.value;
+            if (type === 'mcq' || type === 'true_false') {
+                optionsSection.style.display = 'block';
+                descriptiveSection.style.display = 'none';
+            } else if (['short_answer', 'long_answer', 'essay', 'fill_blank'].includes(type)) {
+                optionsSection.style.display = 'none';
+                descriptiveSection.style.display = 'block';
+            } else {
+                optionsSection.style.display = 'none';
+                descriptiveSection.style.display = 'none';
+            }
+        }
+
+        showBtn.addEventListener('click', () => toggleBuilder(true));
+        hideBtn.addEventListener('click', () => toggleBuilder(false));
+        cancelBtn.addEventListener('click', () => toggleBuilder(false));
+        questionTypeSelect.addEventListener('change', toggleSections);
+        hasImageCheckbox.addEventListener('change', (e) => {
+            imageUploadSection.style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        if (addOptionBtn) {
+            addOptionBtn.addEventListener('click', function() {
+                const currentCount = parseInt(totalForms.value);
+                const firstRow = formsetContainer.querySelector('.builder-option-row');
+                const newRow = firstRow.cloneNode(true);
+                
+                newRow.querySelectorAll('input, select, label').forEach(element => {
+                    if (element.name) element.name = element.name.replace('-0-', `-${currentCount}-`);
+                    if (element.id) element.id = element.id.replace('-0-', `-${currentCount}-`);
+                    if (element.type === 'checkbox') element.checked = false;
+                    else if (element.tagName === 'INPUT') element.value = '';
+                });
+
+                const orderInput = newRow.querySelector('input[name$="-order"]');
+                if (orderInput) orderInput.value = currentCount + 1;
+
+                formsetContainer.appendChild(newRow);
+                totalForms.value = currentCount + 1;
+            });
+        }
+
+        // Copy link functionality
+        const copyBtn = document.getElementById('copy-link');
+        const shareLink = document.getElementById('share-link');
+        const copyMsg = document.getElementById('copy-msg');
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                shareLink.select();
+                document.execCommand('copy');
+                copyMsg.style.display = 'block';
+                setTimeout(() => { copyMsg.style.display = 'none'; }, 2000);
+            });
+        }
+
+        toggleSections();
+    });
+</script>
+{% endblock %}
+
+<style>
+    .question-card:last-child {
+        border-bottom: 0 !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    .badge {
+        font-weight: 600;
+        border-radius: 6px;
+        padding: 0.5em 0.8em;
+    }
+    .card {
+        border-radius: 12px;
+    }
+    .btn {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    .question-builder-active {
+        border-left: 5px solid #0d6efd !important;
+        transition: all 0.3s ease;
+    }
+    .builder-option-row:hover {
+        background-color: #f8f9fa !important;
+    }
+    .hover-border-primary:hover {
+        border-color: #0d6efd !important;
+    }
+    .transition-all {
+        transition: all 0.2s ease-in-out;
+    }
+</style>
+{% endblock %}

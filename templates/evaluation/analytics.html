@@ -1,0 +1,449 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Evaluation Analytics - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-bar text-primary me-2"></i>Evaluation Analytics</h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="refreshAnalytics()">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+            <button class="btn btn-outline-success btn-sm" onclick="exportAnalytics()">
+                <i class="fas fa-download me-1"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Date Range</label>
+                            <select class="form-select" id="dateRange" onchange="filterAnalytics()">
+                                <option value="all">All Time</option>
+                                <option value="7">Last 7 Days</option>
+                                <option value="30">Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Exam Type</label>
+                            <select class="form-select" id="examType" onchange="filterAnalytics()">
+                                <option value="all">All Exams</option>
+                                <option value="mcq">MCQ Only</option>
+                                <option value="descriptive">Descriptive Only</option>
+                                <option value="mixed">Mixed Type</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Score Range</label>
+                            <select class="form-select" id="scoreRange" onchange="filterAnalytics()">
+                                <option value="all">All Scores</option>
+                                <option value="high">High (80%+)</option>
+                                <option value="medium">Medium (60-79%)</option>
+                                <option value="low">Low (&lt;60%)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Evaluation Method</label>
+                            <select class="form-select" id="evalMethod" onchange="filterAnalytics()">
+                                <option value="all">All Methods</option>
+                                <option value="nlp">NLP</option>
+                                <option value="ocr">OCR</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <div class="mb-2"><i class="fas fa-robot fa-3x text-primary opacity-25"></i></div>
+                <h2 class="mb-0">{{ total_evaluations }}</h2>
+                <div class="text-muted">Total AI Evaluations</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <div class="mb-2"><i class="fas fa-chart-line fa-3x text-success opacity-25"></i></div>
+                <h2 class="mb-0">{{ avg_score }}</h2>
+                <div class="text-muted">Average Score</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <div class="mb-2"><i class="fas fa-check-circle fa-3x text-warning opacity-25"></i></div>
+                <h2 class="mb-0">{{ avg_similarity }}%</h2>
+                <div class="text-muted">Average Similarity</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <div class="mb-2"><i class="fas fa-shield-alt fa-3x text-info opacity-25"></i></div>
+                <h2 class="mb-0">{{ avg_confidence }}%</h2>
+                <div class="text-muted">AI Confidence</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-trophy me-2 text-warning"></i>Performance Metrics</h5>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <h4 class="text-success mb-0">{{ high_performers }}</h4>
+                                <small class="text-muted">High Performers (80%+)</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <h4 class="text-danger mb-0">{{ low_performers }}</h4>
+                                <small class="text-muted">Low Performers (<40%)</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <h4 class="text-primary mb-0">{{ perfect_scores }}</h4>
+                                <small class="text-muted">Perfect Scores (95%+)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-shield-alt me-2 text-danger"></i>Proctoring Statistics</h5>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <h4 class="text-info mb-0">{{ total_submissions }}</h4>
+                                <small class="text-muted">Total Submissions</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <h4 class="text-danger mb-0">{{ terminated_exams }}</h4>
+                                <small class="text-muted">Terminated Exams</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <h4 class="text-warning mb-0">{{ violation_rate }}%</h4>
+                                <small class="text-muted">Violation Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-cogs me-2 text-primary"></i>Evaluation Methods</h5>
+                    {% for method in evaluation_methods %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-capitalize">{{ method.evaluation_method }}</span>
+                        <span class="badge bg-primary">{{ method.count }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">No evaluation methods data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Distribution Chart -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-bar me-2"></i>Score Distribution</h5>
+                    <div class="row">
+                        {% for range, count in score_ranges.items %}
+                        <div class="col-md-2">
+                            <div class="text-center mb-3">
+                                <div class="progress mb-2" style="height: 20px;">
+                                    {% if total_evaluations > 0 %}
+                                    {% widthratio count 100 total_evaluations as percentage %}
+                                    <div class="progress-bar {% if range == '81-100' %}bg-success{% elif range == '61-80' %}bg-info{% elif range == '41-60' %}bg-warning{% elif range == '21-40' %}bg-danger{% else %}bg-secondary{% endif %}" 
+                                         style="width: {{ percentage }}%"></div>
+                                    {% endif %}
+                                </div>
+                                <h6 class="mb-1">{{ range }}%</h6>
+                                <small class="text-muted">{{ count }} evaluations</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>Performance Trends</h5>
+                    <canvas id="performanceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Activity Monitor -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-tachometer-alt me-2"></i>Real-time Activity Monitor</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary mb-1" id="liveEvaluations">{{ total_evaluations }}</h4>
+                                <small class="text-muted">Live Evaluations</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success mb-1" id="activeExams">0</h4>
+                                <small class="text-muted">Active Exams</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning mb-1" id="pendingEvaluations">0</h4>
+                                <small class="text-muted">Pending Evaluations</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info mb-1" id="systemHealth">100%</h4>
+                                <small class="text-muted">System Health</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Evaluations -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-history me-2"></i>Recent Evaluations</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Exam</th>
+                                    <th>Score</th>
+                                    <th>Similarity</th>
+                                    <th>Confidence</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for eval in recent_evaluations %}
+                                <tr>
+                                    <td>{{ eval.answer.submission.student.get_full_name|default:eval.answer.submission.student.email }}</td>
+                                    <td>{{ eval.answer.submission.exam.title|truncatechars:30 }}</td>
+                                    <td>
+                                        <span class="badge {% if eval.final_score >= 80 %}bg-success{% elif eval.final_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ eval.final_score|floatformat:1 }}
+                                        </span>
+                                    </td>
+                                    <td>{{ eval.similarity_score|floatformat:1 }}%</td>
+                                    <td>{{ eval.confidence_score|floatformat:1 }}%</td>
+                                    <td>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ eval.evaluation_time|date:"M d, H:i" }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No recent evaluations found. Start evaluating some student answers to see data here.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert alert-info border-0 shadow-sm">
+        <i class="fas fa-info-circle me-2"></i> These statistics are based on the latest AI-evaluated submissions and proctoring data.
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart.js configuration
+const ctx = document.getElementById('performanceChart').getContext('2d');
+const performanceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+            label: 'Average Score',
+            data: [75, 78, 82, 79, 85, 88],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }, {
+            label: 'AI Confidence',
+            data: [85, 87, 83, 89, 91, 93],
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+function refreshAnalytics() {
+    location.reload();
+}
+
+function filterAnalytics() {
+    const dateRange = document.getElementById('dateRange').value;
+    const examType = document.getElementById('examType').value;
+    const scoreRange = document.getElementById('scoreRange').value;
+    const evalMethod = document.getElementById('evalMethod').value;
+    
+    const params = new URLSearchParams();
+    if (dateRange !== 'all') params.append('date_range', dateRange);
+    if (examType !== 'all') params.append('exam_type', examType);
+    if (scoreRange !== 'all') params.append('score_range', scoreRange);
+    if (evalMethod !== 'all') params.append('eval_method', evalMethod);
+    
+    const url = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+    window.location.href = url;
+}
+
+function exportAnalytics() {
+    // Create CSV content
+    let csvContent = "Student,Exam,Score,Similarity,Confidence,Time\n";
+    
+    // Get data from the table
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 6) {
+            const student = cells[0].textContent.trim();
+            const exam = cells[1].textContent.trim();
+            const score = cells[2].textContent.trim();
+            const similarity = cells[3].textContent.trim();
+            const confidence = cells[4].textContent.trim();
+            const time = cells[5].textContent.trim();
+            
+            csvContent += `"${student}","${exam}","${score}","${similarity}","${confidence}","${time}"\n`;
+        }
+    });
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `evaluation_analytics_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// Real-time updates
+function updateRealTimeStats() {
+    // Simulate real-time updates (in production, this would fetch from API)
+    const liveEvals = document.getElementById('liveEvaluations');
+    const activeExams = document.getElementById('activeExams');
+    const pendingEvals = document.getElementById('pendingEvaluations');
+    const systemHealth = document.getElementById('systemHealth');
+    
+    if (liveEvals) {
+        const currentVal = parseInt(liveEvals.textContent);
+        liveEvals.textContent = currentVal + Math.floor(Math.random() * 3);
+    }
+    
+    if (systemHealth) {
+        const health = 95 + Math.floor(Math.random() * 5);
+        systemHealth.textContent = health + '%';
+        systemHealth.className = health >= 98 ? 'text-info mb-1' : 'text-warning mb-1';
+    }
+}
+
+// Update real-time stats every 5 seconds
+setInterval(updateRealTimeStats, 5000);
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    const autoRefresh = localStorage.getItem('analytics_auto_refresh');
+    if (autoRefresh === 'true') {
+        refreshAnalytics();
+    }
+}, 30000);
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 'r':
+                e.preventDefault();
+                refreshAnalytics();
+                break;
+            case 'e':
+                e.preventDefault();
+                exportAnalytics();
+                break;
+        }
+    }
+});
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

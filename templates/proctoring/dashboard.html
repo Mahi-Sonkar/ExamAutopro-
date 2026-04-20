@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Proctoring Dashboard - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-video me-2"></i>Proctoring Dashboard</h1>
+    <div>
+        <span class="badge bg-info me-2">{{ exam.title }}</span>
+        <button class="btn btn-warning" onclick="location.reload()">
+            <i class="fas fa-sync me-2"></i>Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-primary">{{ statistics.total_students }}</h3>
+                <p class="mb-0">Total Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-success">{{ statistics.active_sessions }}</h3>
+                <p class="mb-0">Active Sessions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-warning">{{ statistics.suspicious_activities }}</h3>
+                <p class="mb-0">Suspicious Activities</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-danger">{{ recent_alerts.count }}</h3>
+                <p class="mb-0">Active Alerts</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Sessions -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Active Sessions ({{ active_sessions.count }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if active_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Started At</th>
+                                    <th>Duration</th>
+                                    <th>Events</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in active_sessions %}
+                                    <tr>
+                                        <td>{{ session.student.email }}</td>
+                                        <td>{{ session.start_time|date:"H:i" }}</td>
+                                        <td>{{ session.duration }}</td>
+                                        <td>{{ session.total_events }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ session.status|yesno:'success,warning,danger' }}">
+                                                {{ session.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info btn-sm">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        onclick="terminateSession('{{ session.session_id }}')">
+                                                    <i class="fas fa-stop"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5>No Active Sessions</h5>
+                        <p class="text-muted">Students will appear here when they start taking the exam.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Alerts -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Recent Alerts
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_alerts %}
+                    {% for alert in recent_alerts %}
+                        <div class="alert alert-{{ alert.get_severity_display|lower }} mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ alert.get_alert_type_display }}</strong>
+                                    <br>
+                                    <small>{{ alert.session.student.email }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ alert.created_at|date:"H:i" }}</small>
+                                </div>
+                                {% if not alert.acknowledged %}
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="acknowledgeAlert({{ alert.id }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2">
+                                <small>{{ alert.message }}</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                        <h5>No Alerts</h5>
+                        <p class="text-muted">All systems running normally.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-refresh Script -->
+<script>
+    // Auto-refresh every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+    
+    // Terminate session
+    function terminateSession(sessionId) {
+        if (confirm('Are you sure you want to terminate this session?')) {
+            fetch(`/proctoring/terminate/${sessionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while terminating session');
+            });
+        }
+    }
+    
+    // Acknowledge alert
+    function acknowledgeAlert(alertId) {
+        fetch(`/proctoring/acknowledge/${alertId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while acknowledging alert');
+        });
+    }
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

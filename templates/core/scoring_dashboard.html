@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Scoring Configuration Dashboard{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Scoring Configuration</h3>
+    <a href="{% url 'core:scoring_config_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus me-1"></i>Create Configuration
+    </a>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <strong>Your Active Configurations</strong>
+        </div>
+        <div class="card-body p-0">
+          {% if scoring_configs %}
+          <div class="list-group list-group-flush">
+            {% for cfg in scoring_configs %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">
+                  {% if cfg.exam %}
+                    {{ cfg.exam.title }}
+                  {% else %}
+                    Default (All Exams)
+                  {% endif %}
+                </div>
+                <div class="text-muted small">
+                  Full ≥ {{ cfg.full_marks_threshold }} • Partial ≥ {{ cfg.partial_marks_threshold }} • Min ≥ {{ cfg.minimum_marks_threshold }}
+                </div>
+              </div>
+              <div class="btn-group">
+                <a href="{% url 'core:scoring_config_update' cfg.id %}" class="btn btn-outline-secondary btn-sm">
+                  <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                <a href="{% url 'core:question_wise_scoring' cfg.id %}" class="btn btn-outline-primary btn-sm">
+                  <i class="fas fa-list-ol me-1"></i>Questions
+                </a>
+                <a href="{% url 'core:similarity_range_settings' cfg.id %}" class="btn btn-outline-info btn-sm">
+                  <i class="fas fa-equals me-1"></i>Ranges
+                </a>
+                <a href="{% url 'core:scoring_preview' cfg.id %}" class="btn btn-outline-success btn-sm">
+                  <i class="fas fa-eye me-1"></i>Preview
+                </a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="p-4 text-center text-muted">
+            No configurations found. Create your first configuration to start.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <strong>Quick Actions</strong>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{% url 'core:evaluation_templates' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-clone me-1"></i>Templates
+            </a>
+            <a href="{% url 'core:scoring_config_create' %}" class="btn btn-outline-primary">
+              <i class="fas fa-plus me-1"></i>New Configuration
+            </a>
+            <a href="{% url 'core:scoring_dashboard' %}" class="btn btn-outline-dark">
+              <i class="fas fa-sync me-1"></i>Refresh
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <strong>Recent Uploads</strong>
+        </div>
+        <div class="card-body p-0">
+          {% if recent_uploads %}
+          <ul class="list-group list-group-flush">
+            {% for u in recent_uploads %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between">
+                <span>{{ u.get_file_type_display }} • {{ u.get_status_display }}</span>
+                <span class="text-muted small">{{ u.created_at|date:"Y-m-d H:i" }}</span>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="p-3 text-muted small">No recent uploads.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

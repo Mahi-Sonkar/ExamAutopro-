@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}System Analytics - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold mb-0">
+            <i class="fas fa-chart-line me-2 text-primary"></i>
+            {% if user_type == 'admin' %}System{% else %}My{% endif %} Analytics
+        </h1>
+        <div class="text-muted small">Last 30 Days</div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-5">
+        {% if user_type == 'admin' %}
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-primary mb-1">{{ analytics.exams_created }}</div>
+                    <div class="text-muted small text-uppercase">Exams Created</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-success mb-1">{{ analytics.submissions_made }}</div>
+                    <div class="text-muted small text-uppercase">Submissions</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-info mb-1">{{ analytics.evaluations_completed }}</div>
+                    <div class="text-muted small text-uppercase">Evaluations</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-warning mb-1">{{ analytics.new_users }}</div>
+                    <div class="text-muted small text-uppercase">New Users</div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-primary mb-1">{{ analytics.exams_created }}</div>
+                    <div class="text-muted small text-uppercase">My Exams</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-success mb-1">{{ analytics.submissions_made }}</div>
+                    <div class="text-muted small text-uppercase">Student Submissions</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-info mb-1">{{ analytics.evaluations_completed }}</div>
+                    <div class="text-muted small text-uppercase">AI Evaluations</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="h4 fw-bold text-warning mb-1">{{ analytics.avg_performance }}%</div>
+                    <div class="text-muted small text-uppercase">Avg Performance</div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold mb-4">Activity Trend</h5>
+                <canvas id="activityChart" height="300"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-4">
+                <h5 class="fw-bold mb-4">Performance Distribution</h5>
+                <canvas id="performanceChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dailyLabels = [{% for item in daily_data %}'{{ item.day }}',{% endfor %}];
+        
+        {% if user_type == 'admin' %}
+            const examsData = [{% for item in daily_data %}{{ item.exams }},{% endfor %}];
+            const submissionsData = [{% for item in daily_data %}{{ item.submissions }},{% endfor %}];
+            
+            new Chart(document.getElementById('activityChart'), {
+                type: 'line',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        {
+                            label: 'Exams Created',
+                            data: examsData,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Submissions',
+                            data: submissionsData,
+                            borderColor: '#198754',
+                            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        {% else %}
+            const submissionsData = [{% for item in daily_data %}{{ item.submissions }},{% endfor %}];
+            
+            new Chart(document.getElementById('activityChart'), {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [{
+                        label: 'Daily Submissions',
+                        data: submissionsData,
+                        backgroundColor: '#198754',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        {% endif %}
+
+        // Dummy Performance Distribution for visualization
+        new Chart(document.getElementById('performanceChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Excellent (90+)', 'Good (75-90)', 'Average (40-75)', 'Below Avg (<40)'],
+                datasets: [{
+                    data: [15, 35, 40, 10],
+                    backgroundColor: ['#198754', '#0dcaf0', '#ffc107', '#dc3545'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } },
+                cutout: '70%'
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}
