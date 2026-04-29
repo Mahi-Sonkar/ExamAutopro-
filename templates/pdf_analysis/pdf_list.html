@@ -217,7 +217,7 @@
                                             <a href="{% url 'pdf_export' document.pk %}" class="btn btn-sm btn-outline-info" title="Export Results">
                                                 <i class="fas fa-download"></i>
                                             </a>
-                                            <a href="{% url 'pdf_delete' document.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirmDelete('{{ document.title|escapejs }}')" title="Delete Document">
+                                            <a href="{% url 'pdf_delete' document.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirmDelete('{{ document.title|escapejs }}', '{{ document.pk }}')" title="Delete Document">
                                                 <i class="fas fa-trash"></i>
                                             </a>
                                         </div>
@@ -301,6 +301,36 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Delete PDF Document?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p class="mb-0">Are you sure you want to delete "<span id="deleteDocumentTitle"></span>"?</p>
+                <div class="alert alert-warning mt-3 mb-0 py-2 small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>This action cannot be undone and all analysis results will be permanently deleted.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteBtn">
+                    Yes, Delete Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Delete Form -->
+<form id="deleteForm" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -336,8 +366,59 @@ function confirmDeleteImmediate(documentId, documentTitle) {
     }
 }
 
-function confirmDelete(documentTitle) {
-    return confirm(`Are you sure you want to delete "${documentTitle}"? This action cannot be undone.`);
+function confirmDelete(documentTitle, documentId) {
+    try {
+        // Set document title in modal
+        const titleSpan = document.getElementById('deleteDocumentTitle');
+        if (titleSpan) {
+            titleSpan.textContent = documentTitle;
+        }
+        
+        // Set form action
+        const deleteForm = document.getElementById('deleteForm');
+        if (deleteForm) {
+            deleteForm.action = `/pdf/${documentId}/delete/`;
+        }
+        
+        // Show modal
+        const deleteModal = document.getElementById('deleteModal');
+        if (deleteModal && typeof bootstrap !== 'undefined') {
+            try {
+                const modal = new bootstrap.Modal(deleteModal);
+                modal.show();
+                return false; // Prevent default link navigation
+            } catch (e) {
+                console.warn('Bootstrap Modal failed, using browser confirm', e);
+                // Fallback to browser confirm
+                return confirm(`Are you sure you want to delete "${documentTitle}"?`);
+            }
+        } else {
+            // Fallback to browser confirm
+            return confirm(`Are you sure you want to delete "${documentTitle}"?`);
+        }
+    } catch (error) {
+        console.error('Delete confirmation error:', error);
+        // Last resort fallback
+        return confirm(`Delete "${documentTitle}"?`);
+    }
 }
+
+// Handle modal delete button click
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            const deleteForm = document.getElementById('deleteForm');
+            if (deleteForm) {
+                // Show loading state
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+                
+                // Submit form
+                deleteForm.submit();
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

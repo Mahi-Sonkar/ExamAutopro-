@@ -163,9 +163,12 @@ CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins (for browser proxy)
 CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:53600',
+    'http://localhost:53600',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
     'http://127.0.0.1:51532',
     'http://localhost:51532',
-    'http://127.0.0.1:8000',
     'http://localhost:8000',
     'http://127.0.0.1:58779',
     'http://localhost:58779',

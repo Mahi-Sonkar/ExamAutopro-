@@ -134,12 +134,61 @@ class EvaluationResultListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         
-        # Add fallback statistics without database queries
-        context['total_submissions'] = 0
-        context['terminated_exams'] = 0
-        
-        # Add message about database status
-        context['database_message'] = "Evaluation results are currently being updated. Please check back later."
+        try:
+            # Calculate total submissions (exam submissions)
+            if user.role == 'teacher':
+                total_submissions = ExamSubmission.objects.filter(exam__teacher=user).count()
+            elif user.role == 'student':
+                total_submissions = ExamSubmission.objects.filter(student=user).count()
+            else:
+                total_submissions = ExamSubmission.objects.count()
+            
+            # Calculate terminated exams (exams with terminated status)
+            if user.role == 'teacher':
+                terminated_exams = Exam.objects.filter(teacher=user, status='terminated').count()
+            else:
+                terminated_exams = Exam.objects.filter(status='terminated').count()
+            
+            # Calculate total violations (proctoring events)
+            if user.role == 'teacher':
+                violations_count = ProctoringEvent.objects.filter(
+                    session__exam__teacher=user
+                ).count()
+            elif user.role == 'student':
+                violations_count = ProctoringEvent.objects.filter(
+                    session__student=user
+                ).count()
+            else:
+                violations_count = ProctoringEvent.objects.count()
+            
+            # Calculate evaluations count
+            if user.role == 'teacher':
+                evaluations_count = EvaluationResult.objects.filter(
+                    answer__question__exam__teacher=user
+                ).count()
+            elif user.role == 'student':
+                evaluations_count = EvaluationResult.objects.filter(
+                    answer__submission__student=user
+                ).count()
+            else:
+                evaluations_count = EvaluationResult.objects.count()
+            
+            # Update context with real statistics
+            context['total_submissions'] = total_submissions
+            context['terminated_exams'] = terminated_exams
+            context['violations_count'] = violations_count
+            context['evaluations_count'] = evaluations_count
+            
+            # Remove database message since we're now showing real data
+            context['database_message'] = None
+            
+        except Exception as e:
+            # Fallback to zeros if there's an error
+            context['total_submissions'] = 0
+            context['terminated_exams'] = 0
+            context['violations_count'] = 0
+            context['evaluations_count'] = 0
+            context['database_message'] = f"Error loading statistics: {str(e)}"
         
         return context
 

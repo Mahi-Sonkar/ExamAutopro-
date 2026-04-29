@@ -200,7 +200,7 @@
                     <i class="fas fa-video fa-3x"></i>
                 </div>
                 <h5>Online Proctoring</h5>
-                <p class="text-muted">Real-time monitoring with tab-switch and face detection</p>
+                <p class="text-muted">Real-time monitoring with tab-switch detection</p>
             </div>
         </div>
         
@@ -210,7 +210,7 @@
                     <i class="fas fa-users fa-3x"></i>
                 </div>
                 <h5>Role-Based Access</h5>
-                <p class="text-muted">Separate interfaces for Admins, Teachers, and Students</p>
+                <p class="text-muted">Separate interfaces for Teachers and Students</p>
             </div>
         </div>
         
@@ -242,7 +242,7 @@
                     1
                 </div>
                 <h5>Create Account</h5>
-                <p class="text-muted">Register as Teacher, Student, or Admin to get started</p>
+                <p class="text-muted">Register as Teacher or Student to get started</p>
             </div>
             
             <div class="col-md-6 col-lg-3 text-center">
@@ -280,13 +280,10 @@
         
         {% if not user.is_authenticated %}
             <div class="d-flex gap-3 justify-content-center flex-wrap">
-                <a href="{% url 'register' %}" class="btn btn-light btn-lg">
-                    <i class="fas fa-user-plus me-2"></i>Start Free Trial
+                <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-tachometer-alt me-2"></i>GO TO DASHBOARD
                 </a>
-                <a href="#features" class="btn btn-outline-light btn-lg">
-                    <i class="fas fa-info-circle me-2"></i>Learn More
-                </a>
-            </div>
+                            </div>
         {% else %}
             <div class="d-flex gap-3 justify-content-center flex-wrap">
                 <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">

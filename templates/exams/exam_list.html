@@ -227,9 +227,6 @@
                                     </td>
                                     <td>
                                         <div class="btn-group">
-                                            <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
                                             {% if user.is_teacher %}
                                                 <a href="{% url 'exam_update' exam.pk %}" class="btn btn-sm btn-outline-warning">
                                                     <i class="fas fa-edit"></i>

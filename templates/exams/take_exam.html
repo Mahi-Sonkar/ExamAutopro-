@@ -16,7 +16,7 @@
                 <div id="exam-timer" class="h4 mb-0 fw-bold font-monospace text-primary">--:--:--</div>
             </div>
             <div>
-                <button type="button" class="btn btn-danger fw-bold px-4" onclick="showSubmitModal(); return false;">
+                <button type="submit" class="btn btn-danger fw-bold px-4" form="exam-form">
                     Submit Exam
                 </button>
             </div>
@@ -393,9 +393,6 @@
     
     // Add event listeners to check answers automatically
     document.addEventListener('DOMContentLoaded', function() {
-        // Initial check
-        checkAllAnswers();
-        
         // Add listeners to all form inputs
         const inputs = document.querySelectorAll('input, textarea');
         inputs.forEach(input => {
@@ -410,20 +407,6 @@
         });
     });
     
-            // Fallback: manually show modal
-            const modalElement = document.getElementById('submitModal');
-            modalElement.style.display = 'block';
-            modalElement.classList.add('show');
-            document.body.classList.add('modal-open');
-            
-            // Add backdrop
-            const backdrop = document.createElement('div');
-            backdrop.className = 'modal-backdrop fade show';
-            backdrop.id = 'modal-backdrop';
-            document.body.appendChild(backdrop);
-        }
-    }
-
     // Function to check if all questions are answered
     function checkAllAnswers() {
         const questions = document.querySelectorAll('[data-question-id]');
@@ -451,20 +434,6 @@
                 allAnswered = false;
             }
         });
-        
-        // Update submit button state
-        const submitButton = document.querySelector('button[onclick="showSubmitModal()"]');
-        if (submitButton) {
-            if (allAnswered) {
-                submitButton.disabled = false;
-                submitButton.classList.remove('disabled');
-                submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Exam';
-            } else {
-                submitButton.disabled = true;
-                submitButton.classList.add('disabled');
-                submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Please answer all questions';
-            }
-        }
         
         return allAnswered;
     }

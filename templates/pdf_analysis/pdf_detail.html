@@ -26,7 +26,176 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Clean up any existing modal backdrops on page load
+    cleanupModalBackdrop();
+
+    // Add Bootstrap modal event listener for proper cleanup
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal && typeof bootstrap !== 'undefined') {
+        deleteModal.addEventListener('hidden.bs.modal', function () {
+            handleModalClose();
+        });
+    }
+
+    // Global escape key listener for emergency modal close
+    document.addEventListener('keydown', function globalEscapeHandler(e) {
+        if (e.key === 'Escape') {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                cleanupModalBackdrop();
+            }
+        }
+    });
+
+    // Double-click escape for force cleanup
+    let escapeCount = 0;
+    document.addEventListener('keydown', function forceEscapeHandler(e) {
+        if (e.key === 'Escape') {
+            escapeCount++;
+            if (escapeCount >= 2) {
+                e.preventDefault();
+                cleanupModalBackdrop();
+                escapeCount = 0;
+            }
+            // Reset count after 1 second
+            setTimeout(() => { escapeCount = 0; }, 1000);
+        }
+    });
+
+    // Page visibility change cleanup
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            cleanupModalBackdrop();
+        }
+    });
+
+    console.log('Modal freeze protection activated');
 });
+
+/**
+ * Immediate delete confirmation using a simple browser confirm.
+ * Used as a fallback or direct action.
+ */
+function confirmDeleteImmediate(documentId, documentTitle) {
+    try {
+        // Force cleanup before any modal operation
+        cleanupModalBackdrop();
+        
+        const documentTitleSpan = document.getElementById('documentTitle');
+        if (documentTitleSpan) documentTitleSpan.textContent = documentTitle;
+        
+        const deleteForm = document.getElementById('deleteForm');
+        if (deleteForm) {
+            deleteForm.action = `/pdf/${documentId}/delete/`;
+            
+            // Add timeout to prevent immediate freeze
+            setTimeout(() => {
+                try {
+                    // Try to show Bootstrap modal first
+                    const deleteModal = document.getElementById('deleteModal');
+                    if (typeof bootstrap !== 'undefined' && deleteModal) {
+                        try {
+                            const modal = new bootstrap.Modal(deleteModal);
+                            modal.show();
+                            
+                            // Add escape key listener for emergency close
+                            document.addEventListener('keydown', function escapeHandler(e) {
+                                if (e.key === 'Escape') {
+                                    document.removeEventListener('keydown', escapeHandler);
+                                    cleanupModalBackdrop();
+                                }
+                            });
+                            
+                            return;
+                        } catch (e) {
+                            console.warn('Bootstrap Modal failed, using browser confirm', e);
+                        }
+                    }
+                    
+                    // Fallback to native confirm with timeout
+                    setTimeout(() => {
+                        if (confirm(`Are you sure you want to delete "${documentTitle}"?`)) {
+                            cleanupModalBackdrop();
+                            deleteForm.submit();
+                        } else {
+                            cleanupModalBackdrop();
+                        }
+                    }, 100);
+                    
+                } catch (e) {
+                    console.error('Modal error:', e);
+                    cleanupModalBackdrop();
+                    // Emergency fallback - direct confirm
+                    if (confirm(`Delete "${documentTitle}"?`)) {
+                        deleteForm.submit();
+                    }
+                }
+            }, 50);
+        } else {
+            console.error('Delete form not found');
+        }
+    } catch (e) {
+        console.error('confirmDeleteImmediate error:', e);
+        cleanupModalBackdrop();
+        // Last resort - direct deletion
+        if (confirm(`Delete "${documentTitle}"?`)) {
+            const deleteForm = document.getElementById('deleteForm');
+            if (deleteForm) {
+                deleteForm.action = `/pdf/${documentId}/delete/`;
+                deleteForm.submit();
+            }
+        }
+    }
+}
+
+/**
+ * Clean up any stuck modal backdrops
+ */
+function cleanupModalBackdrop() {
+    // Force remove all modal backdrops with multiple methods
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => {
+        backdrop.remove();
+        backdrop.parentNode?.removeChild(backdrop);
+    });
+    
+    // Remove any dynamically created backdrops
+    const dynamicBackdrops = document.querySelectorAll('[style*="position: fixed"][style*="z-index: 1055"]');
+    dynamicBackdrops.forEach(backdrop => backdrop.remove());
+    
+    // Remove modal classes from body
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Force remove any inline styles that might be causing freeze
+    document.body.removeAttribute('style');
+    
+    console.log('Modal backdrop cleanup completed');
+}
+
+/**
+ * Handle modal close properly
+ */
+function handleModalClose() {
+    cleanupModalBackdrop();
+    
+    // Reset the form
+    const deleteForm = document.getElementById('deleteForm');
+    if (deleteForm) {
+        deleteForm.reset();
+        deleteForm.action = '';
+    }
+}
+
+function confirmDelete(documentTitle) {
+    return confirm(`Are you sure you want to delete "${documentTitle}"? This action cannot be undone.`);
+}
 </script>
 {% endblock %}
 
@@ -223,9 +392,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                             </button>
                                         </form>
                                     {% endif %}
-                                    <a href="{% url 'pdf_delete' pdf_document.pk %}" class="btn btn-danger">
+                                    <button type="button" class="btn btn-danger" onclick="confirmDeleteImmediate('{{ pdf_document.pk }}', '{{ pdf_document.title|escapejs }}')" title="Delete Document">
                                         <i class="fas fa-trash me-1"></i>Delete PDF
-                                    </a>
+                                    </button>
                                 </div>
                                 
                                 <!-- Recent Processing Logs -->
@@ -280,4 +449,34 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Delete PDF Document?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="handleModalClose()"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p class="mb-0">Are you sure you want to delete "<span id="documentTitle"></span>"? This action cannot be undone.</p>
+                <div class="alert alert-warning mt-3 mb-0 py-2 small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>All analysis results and data will be permanently deleted.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" onclick="handleModalClose()">Cancel</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="document.getElementById('deleteForm').submit()">
+                    Yes, Delete Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Delete Form -->
+<form id="deleteForm" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+
 {% endblock %}

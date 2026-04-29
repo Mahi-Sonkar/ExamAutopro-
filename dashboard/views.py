@@ -19,7 +19,7 @@ from core.models import ScoringConfiguration
 def dashboard_view(request):
     """Main dashboard view - redirects based on user role"""
     if not request.user.is_authenticated:
-        return redirect('accounts:login')
+        return redirect('login')
     
     if request.user.role == 'admin':
         return admin_dashboard(request)
@@ -28,7 +28,7 @@ def dashboard_view(request):
     elif request.user.role == 'student':
         return student_dashboard(request)
     else:
-        return redirect('accounts:login')
+        return redirect('login')
 
 def admin_dashboard(request):
     """Admin dashboard with system-wide statistics"""
