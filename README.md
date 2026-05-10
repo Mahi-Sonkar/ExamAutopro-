@@ -1,75 +1,85 @@
-# ExamAutoPro
+# ExamAutoPro - AI-Powered Automated Examination System
 
-ExamAutoPro is a Django-based examination automation platform for creating exams, collecting submissions, evaluating answers, processing uploaded answer sheets, and supporting proctoring workflows.
+ExamAutoPro is a comprehensive AI-based examination evaluation system built with Django. It helps automate exam creation, student submissions, answer-sheet analysis, AI-assisted evaluation, result generation, and exam integrity workflows through proctoring and attempt restrictions.
 
-## Features
+## Key Features
 
-- User accounts for students, teachers, and administrators
-- Exam creation, question management, and online exam taking
-- AI-assisted descriptive answer evaluation
-- PDF/image answer-sheet upload and analysis
-- Teacher exam selection for answer-sheet evaluation using stored questions and model answers
-- OCR support with Tesseract, Google Vision, Gemini, and OCR.Space fallbacks where configured
-- Scoring ranges, scoring configuration import, evaluation dashboards, analytics, and result views
-- Basic proctoring workflows and dashboard pages
+### Exam Integrity & Proctoring
+
+- Restricted exam attempts with support for configurable attempt limits.
+- Proctoring workflows for monitoring exam activity.
+- Student, teacher, and administrator roles with dedicated access flows.
+- Secure exam-taking pages designed to reduce unfair assistance during online exams.
+
+### AI-Powered Evaluation
+
+- Hybrid scoring support using similarity analysis, keyword coverage, and configurable scoring ranges.
+- Automated evaluation for MCQ and descriptive answers.
+- PDF/image answer-sheet upload for scanned or handwritten submissions.
+- OCR support with Tesseract, Google Vision, Gemini, and OCR.Space fallbacks where configured.
+- Teacher exam selection during answer-sheet evaluation so saved questions, marks, model answers, and keywords can guide scoring.
+
+### Role-Based Dashboards
+
+- Student dashboard for available exams, submissions, and evaluated results.
+- Teacher dashboard for managing exams, questions, scoring rules, and answer-sheet analysis.
+- Admin dashboard for user, exam, and system-level oversight.
+- Analytics and result views for reviewing student performance and evaluation outcomes.
+
+### Scoring & Analysis Tools
+
+- Configurable scoring ranges for evaluation rules.
+- Scoring configuration import pages.
+- Question-wise evaluation and feedback support.
+- PDF analysis detail pages for reviewing extracted content and generated results.
 
 ## Tech Stack
 
-- Python 3.8+
-- Django 4.2
-- Django REST Framework
-- SQLite for local development
-- OpenCV, pytesseract, scikit-learn, NLTK, spaCy, pdfplumber, PyMuPDF, and related OCR/NLP tools
+- Backend: Django 4.2, Django REST Framework
+- Database: SQLite for local development, configurable for production databases
+- Frontend: HTML templates, Bootstrap-style UI, CSS, JavaScript
+- AI/NLP/OCR: NLTK, scikit-learn, spaCy, OpenCV, pytesseract, pdfplumber, PyMuPDF
+- Optional Providers: Google Vision, Gemini, Groq, OCR.Space
 
-## Setup
+## Installation & Setup
 
-1. Create and activate a virtual environment:
+### 1. Clone the Repository
 
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate
-   ```
+```bash
+git clone https://github.com/Mahi-Sonkar/ExamAutopro-.git
+cd ExamAutopro-
+```
 
-2. Install dependencies:
+### 2. Create a Virtual Environment
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
 
-3. Apply database migrations:
+On Linux/macOS:
 
-   ```bash
-   python manage.py migrate
-   ```
+```bash
+source venv/bin/activate
+```
 
-4. Optional: use a custom SQLite database path for local testing:
+### 3. Install Dependencies
 
-   ```bash
-   set SQLITE_NAME=D:\ExamAutoPro\local.sqlite3
-   python manage.py migrate
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-5. Create an admin user:
+### 4. Configure OCR
 
-   ```bash
-   python manage.py createsuperuser
-   ```
+Install Tesseract OCR on your system if you want local OCR support.
 
-6. Run the development server:
+- Windows: install a Tesseract build such as UB-Mannheim Tesseract.
+- Make sure Tesseract is available on your system path.
+- If needed, update the Tesseract command path in project settings.
 
-   ```bash
-   python manage.py runserver
-   ```
+### 5. Configure Environment Variables
 
-7. Open the app:
-
-   ```text
-   http://127.0.0.1:8000/
-   ```
-
-## Optional Configuration
-
-Create a local `.env` file for API keys and provider preferences. Do not commit this file.
+Create a local `.env` file for API keys and local configuration. Do not commit this file.
 
 ```env
 GEMINI_API_KEY=your_gemini_key
@@ -80,36 +90,84 @@ AI_PROVIDER_PRIORITY=gemini,groq
 SQLITE_NAME=D:\ExamAutoPro\db.sqlite3
 ```
 
-For local OCR, install Tesseract OCR separately and make sure it is available on your system path.
+### 6. Apply Database Migrations
 
-## Useful Commands
+```bash
+python manage.py migrate
+```
+
+### 7. Create an Admin User
+
+```bash
+python manage.py createsuperuser
+```
+
+### 8. Start the Development Server
+
+```bash
+python manage.py runserver
+```
+
+Open the app at:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Verification
+
+Run Django checks before development or deployment:
 
 ```bash
 python manage.py check
 python manage.py makemigrations --check --dry-run
-python manage.py test
-python manage.py collectstatic
 ```
 
-## Project Structure
+Run tests when available:
 
-- `accounts/` - custom user accounts and authentication views
-- `exams/` - exam, question, submission, and answer workflows
-- `evaluation/` - scoring, evaluation engines, and evaluation results
-- `pdf_analysis/` - PDF upload, OCR, NLP, and answer-sheet analysis
-- `proctoring/` - proctoring models and views
-- `dashboard/` - role-based dashboard pages
-- `templates/` - shared and app-specific HTML templates
-- `static/` - CSS and JavaScript assets
+```bash
+python manage.py test
+```
 
 ## Teacher Workflow
 
 1. Create an exam and add questions, marks, model answers, and keywords.
-2. Configure scoring ranges globally or for the selected exam.
-3. Upload a student's answer sheet from the PDF analysis page.
-4. Select the matching exam so the evaluator can use the saved questions and model answers.
-5. Review extracted answers, marks, feedback, and analytics from the result and dashboard pages.
+2. Configure global or exam-specific scoring ranges.
+3. Upload a student's PDF/image answer sheet from the PDF analysis page.
+4. Select the matching exam so the evaluator can use saved question data.
+5. Review extracted answers, marks, feedback, percentages, and analytics.
 
-## Notes
+## Project Structure
 
-The project defaults to SQLite and development-friendly settings. Before production deployment, configure a secure `SECRET_KEY`, set `DEBUG=False`, update `ALLOWED_HOSTS`, configure a production database, and use proper static/media file hosting.
+```text
+ExamAutoPro/
+├── accounts/        # Custom user accounts and authentication views
+├── core/            # Shared evaluation, processing, and API utilities
+├── dashboard/       # Role-based dashboard pages
+├── evaluation/      # Scoring rules, evaluation models, and result workflows
+├── exams/           # Exam, question, answer, and submission logic
+├── pdf_analysis/    # PDF/image upload, OCR, NLP, and answer-sheet analysis
+├── proctoring/      # Proctoring models, views, and monitoring helpers
+├── static/          # CSS and JavaScript assets
+├── templates/       # Shared and app-specific HTML templates
+├── ExamAutoPro/     # Django project settings and URL configuration
+├── manage.py        # Django management script
+└── requirements.txt # Python dependencies
+```
+
+## Production Notes
+
+Before production deployment:
+
+- Configure a secure `SECRET_KEY`.
+- Set `DEBUG=False`.
+- Update `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`.
+- Configure a production database.
+- Configure static and media file hosting.
+- Store API keys and credentials outside source control.
+
+## Author
+
+Mahi Sonkar - [GitHub](https://github.com/Mahi-Sonkar)
+
+Developed as part of a major project for automated education evaluation.
