@@ -370,7 +370,7 @@ class AnswerEvaluationEngine:
                 keywords = question.get('keywords', '')
 
                 ai_result = None
-                if self.ai_evaluator and self.ai_evaluator.available and reference_text:
+                if self.ai_evaluator and self.ai_evaluator.available:
                     ai_result = self.ai_evaluator.evaluate(
                         student_answer=answer_portion,
                         model_answer=reference_text,
@@ -570,6 +570,7 @@ class AnswerEvaluationEngine:
                            answer_sheet_path: str,
                            question_paper_path: str = None,
                            scoring_rules: Dict[str, Any] = None,
+                           question_specs: Optional[List[Dict[str, Any]]] = None,
                            marking_scheme_text: str = "",
                            total_marks: Optional[float] = None) -> Dict[str, Any]:
         """
@@ -584,16 +585,16 @@ class AnswerEvaluationEngine:
             if not answer_extraction['success']:
                 raise Exception(f"Answer sheet extraction failed: {answer_extraction.get('error')}")
 
-            # Step 2: Detect questions (if question paper provided)
-            questions = []
+            # Step 2: Use selected exam questions first, otherwise detect from uploaded paper.
+            questions = list(question_specs or [])
             question_detection = {
-                'questions': [],
+                'questions': questions,
                 'raw_text': '',
                 'confidence': 0.0,
-                'method_used': 'not_provided',
-                'success': False,
+                'method_used': 'selected_exam' if questions else 'not_provided',
+                'success': bool(questions),
             }
-            if question_paper_path and os.path.exists(question_paper_path):
+            if not questions and question_paper_path and os.path.exists(question_paper_path):
                 question_detection = self.detect_questions_from_paper(question_paper_path)
                 if question_detection['success']:
                     questions = question_detection['questions']
@@ -631,7 +632,13 @@ class AnswerEvaluationEngine:
                     'confidence': question_detection.get('confidence', 0.0),
                     'method_used': question_detection.get('method_used', 'not_provided'),
                     'success': True,
-                    'method': 'auto_detection' if question_paper_path else 'from_answer_text'
+                    'method': (
+                        'selected_exam'
+                        if question_specs
+                        else 'auto_detection'
+                        if question_paper_path
+                        else 'from_answer_text'
+                    )
                 },
                 'evaluation': evaluation,
                 'final_results': {

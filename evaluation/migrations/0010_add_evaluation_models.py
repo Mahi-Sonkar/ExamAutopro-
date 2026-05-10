@@ -42,20 +42,4 @@ class Migration(migrations.Migration):
                 'unique_together': {('question_paper', 'question_number')},
             },
         ),
-        migrations.CreateModel(
-            name='EvaluationResult',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('answer_sheet', models.ForeignKey('pdf_analysis.PDFDocument', on_delete=django.db.models.deletion.CASCADE)),
-                ('question_paper', models.ForeignKey('evaluation.QuestionPaper', on_delete=django.db.models.deletion.CASCADE)),
-                ('total_marks', models.FloatField(default=0.0)),
-                ('obtained_marks', models.FloatField(default=0.0)),
-                ('percentage', models.FloatField(default=0.0)),
-                ('evaluation_data', models.JSONField(default=dict, blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-            ],
-            options={
-                'ordering': ['-created_at'],
-            },
-        ),
     ]

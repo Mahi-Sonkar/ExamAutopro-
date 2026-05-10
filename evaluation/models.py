@@ -12,7 +12,7 @@ class QuestionPaper(models.Model):
     
     id = models.UUIDField(primary_key=True, editable=False)
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -134,13 +134,13 @@ class EvaluationResult(models.Model):
     Stores the results of AI evaluation for each answer.
     """
     answer = models.OneToOneField('exams.Answer', on_delete=models.CASCADE)
-    similarity_score = models.FloatField(help_text="Similarity score from NLP analysis")
+    similarity_score = models.FloatField(default=0.0, help_text="Similarity score from NLP analysis")
     keyword_match_score = models.FloatField(default=0.0, help_text="Score based on keyword matching")
     confidence_score = models.FloatField(default=0.0, help_text="Confidence score of AI evaluation")
-    initial_score = models.FloatField(help_text="Initial score from AI evaluation")
+    initial_score = models.FloatField(default=0.0, help_text="Initial score from AI evaluation")
     grace_marks_applied = models.FloatField(default=0.0, help_text="Grace marks applied")
-    final_score = models.FloatField(help_text="Final score after grace marks")
-    feedback = models.TextField(help_text="AI-generated feedback")
+    final_score = models.FloatField(default=0.0, help_text="Final score after grace marks")
+    feedback = models.TextField(default='', help_text="AI-generated feedback")
     evaluation_time = models.DateTimeField(auto_now_add=True)
     evaluation_method = models.CharField(max_length=50, default='nlp', help_text="Method used for evaluation")
 
@@ -155,7 +155,7 @@ class GraceMarksRule(models.Model):
     Rules for applying grace marks based on various conditions.
     """
     name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, null=True)
     condition_type = models.CharField(max_length=50, choices=[
         ('similarity_threshold', 'Similarity Threshold'),
         ('keyword_count', 'Keyword Count'),
@@ -194,9 +194,9 @@ class OCREvaluation(models.Model):
     Stores OCR evaluation results for handwritten answers.
     """
     answer = models.OneToOneField('exams.Answer', on_delete=models.CASCADE)
-    extracted_text = models.TextField(help_text="Text extracted from handwritten answer")
-    confidence_score = models.FloatField(help_text="Confidence score of OCR extraction")
-    processing_time = models.FloatField(help_text="Time taken for OCR processing")
+    extracted_text = models.TextField(default='', help_text="Text extracted from handwritten answer")
+    confidence_score = models.FloatField(default=0.0, help_text="Confidence score of OCR extraction")
+    processing_time = models.FloatField(default=0.0, help_text="Time taken for OCR processing")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -210,10 +210,10 @@ class NLPEvaluation(models.Model):
     Stores NLP evaluation results.
     """
     answer = models.OneToOneField('exams.Answer', on_delete=models.CASCADE)
-    text_similarity = models.FloatField(help_text="Text similarity score")
-    semantic_similarity = models.FloatField(help_text="Semantic similarity score")
+    text_similarity = models.FloatField(default=0.0, help_text="Text similarity score")
+    semantic_similarity = models.FloatField(default=0.0, help_text="Semantic similarity score")
     keyword_matches = models.JSONField(default=dict, help_text="Keyword matching results")
-    processing_time = models.FloatField(help_text="Time taken for NLP processing")
+    processing_time = models.FloatField(default=0.0, help_text="Time taken for NLP processing")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

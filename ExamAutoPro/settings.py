@@ -96,7 +96,7 @@ WSGI_APPLICATION = 'ExamAutoPro.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.environ.get('SQLITE_NAME', BASE_DIR / 'db.sqlite3'),
     }
 }
 
@@ -191,6 +191,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:63721',
     'http://127.0.0.1:53849',
     'http://localhost:53849',
+    'http://127.0.0.1:62227',
+    'http://localhost:62227',
+    'http://127.0.0.1:52837',
+    'http://localhost:52837',
 ]
 
 # File Upload Settings

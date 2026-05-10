@@ -17,6 +17,7 @@ import json
 def pdf_upload_view(request):
     """PDF upload page"""
     from .forms import PDFUploadForm
+    from exams.models import Exam
     
     if request.method == 'POST':
         form = PDFUploadForm(request.POST, request.FILES)
@@ -33,7 +34,14 @@ def pdf_upload_view(request):
     else:
         form = PDFUploadForm()
     
-    return render(request, 'pdf_analysis/pdf_upload.html', {'form': form})
+    teacher_exams = Exam.objects.none()
+    if getattr(request.user, 'role', None) == 'teacher':
+        teacher_exams = Exam.objects.filter(teacher=request.user).prefetch_related('questions').order_by('-created_at')
+
+    return render(request, 'pdf_analysis/pdf_upload.html', {
+        'form': form,
+        'teacher_exams': teacher_exams,
+    })
 
 @login_required
 def pdf_list_view(request):
@@ -735,6 +743,7 @@ def upload_pdf_api(request):
         }, status=500)
 
 @csrf_exempt
+@login_required
 @require_http_methods(["POST"])
 def evaluate_answer_sheet_api(request):
     """
@@ -751,9 +760,12 @@ def evaluate_answer_sheet_api(request):
         
         answer_sheet = request.FILES['answer_sheet']
         question_paper = request.FILES.get('question_paper', None)
+        exam_id = request.POST.get('exam_id', '').strip()
         marking_scheme_text = request.POST.get('marking_scheme', '').strip()
         total_marks = request.POST.get('total_marks', '').strip()
         total_marks = float(total_marks) if total_marks else None
+        selected_exam = None
+        question_specs = []
         
         # Validate file types
         if not answer_sheet.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png')):
@@ -767,6 +779,30 @@ def evaluate_answer_sheet_api(request):
                 'success': False,
                 'error': 'Question paper must be PDF or image file'
             }, status=400)
+
+        if exam_id:
+            from django.shortcuts import get_object_or_404
+            from exams.models import Exam
+
+            selected_exam = get_object_or_404(
+                Exam.objects.prefetch_related('questions'),
+                id=exam_id,
+                teacher=request.user
+            )
+            question_specs = [
+                {
+                    'question_number': index + 1,
+                    'question': question.question_text,
+                    'type': question.question_type,
+                    'marks': float(question.marks),
+                    'weight': float(question.marks) / 10.0,
+                    'model_answer': question.model_answer or '',
+                    'keywords': question.keywords or '',
+                }
+                for index, question in enumerate(selected_exam.questions.all())
+            ]
+            if total_marks is None:
+                total_marks = float(selected_exam.total_marks)
         
         # Parse scoring rules from request
         scoring_rules = {}
@@ -779,9 +815,14 @@ def evaluate_answer_sheet_api(request):
         # Fetch scoring ranges from database if not provided
         if not scoring_rules:
             from evaluation.models import ScoringRange
-            scoring_ranges = ScoringRange.objects.filter(is_active=True).order_by('-min_similarity')
+            from django.db.models import Q
+
+            scoring_ranges = ScoringRange.objects.filter(is_active=True)
             if request.user.is_authenticated and getattr(request.user, 'role', None) == 'teacher':
                 scoring_ranges = scoring_ranges.filter(created_by=request.user)
+            if selected_exam:
+                scoring_ranges = scoring_ranges.filter(Q(exam=selected_exam) | Q(exam__isnull=True))
+            scoring_ranges = scoring_ranges.order_by('-min_similarity')
             for sr in scoring_ranges:
                 scoring_rules[sr.name.lower()] = {
                     'range': (sr.min_similarity * 100, sr.max_similarity * 100),
@@ -826,6 +867,7 @@ def evaluate_answer_sheet_api(request):
                 answer_sheet_path=answer_sheet_path,
                 question_paper_path=question_paper_path,
                 scoring_rules=scoring_rules,
+                question_specs=question_specs,
                 marking_scheme_text=marking_scheme_text,
                 total_marks=total_marks
             )

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Exams - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1"><i class="fas fa-search text-primary me-2"></i>Search Results</h1>
+            <p class="text-muted mb-0">Results for "{{ query }}"</p>
+        </div>
+        <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Exams
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            {% if exams %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Exam</th>
+                                <th>Teacher</th>
+                                <th>Status</th>
+                                <th>Marks</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in exams %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">{{ exam.title }}</div>
+                                        <div class="text-muted small">{{ exam.description|truncatewords:14 }}</div>
+                                    </td>
+                                    <td>{{ exam.teacher.email }}</td>
+                                    <td><span class="badge bg-secondary">{{ exam.get_status_display }}</span></td>
+                                    <td>{{ exam.total_marks }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5 text-muted">No exams matched your search.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

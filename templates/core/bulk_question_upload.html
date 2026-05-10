@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Question Upload - ExamAutoPro{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1"><i class="fas fa-file-upload text-primary me-2"></i>Bulk Question Upload</h1>
+            <p class="text-muted mb-0">Upload CSV, Excel, or JSON question data for scoring setup.</p>
+        </div>
+        <a href="{% url 'core:scoring_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Scoring
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="row g-3">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

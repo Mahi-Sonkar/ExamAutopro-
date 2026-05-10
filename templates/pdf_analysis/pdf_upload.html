@@ -176,14 +176,25 @@
                 <div class="card-body p-4">
                     <form id="answer-sheet-eval-form" enctype="multipart/form-data">
                         {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Question Paper / Exam</label>
+                            <select name="exam_id" class="form-select">
+                                <option value="">Use uploaded question paper or marking scheme</option>
+                                {% for exam in teacher_exams %}
+                                    <option value="{{ exam.id }}">{{ exam.title }} ({{ exam.total_questions }} questions, {{ exam.total_marks }} marks)</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select an existing exam to evaluate against its questions, model answers, marks, and scoring rules.</div>
+                        </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Answer Sheet *</label>
                                 <input type="file" name="answer_sheet" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Question Paper</label>
+                                <label class="form-label">Question Paper Image/PDF</label>
                                 <input type="file" name="question_paper" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                <div class="form-text">Optional when an exam is selected.</div>
                             </div>
                         </div>
                         <div class="row">
@@ -325,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>Q${escapeHtml(item.question_number)}</td>
                 <td>${Number(item.marks_awarded || 0).toFixed(2)} / ${Number(item.max_marks || 0).toFixed(2)}</td>
                 <td>${(Number(item.similarity_score || 0) * 100).toFixed(1)}%</td>
+                <td>${escapeHtml(item.evaluation_method || '')}</td>
                 <td>${escapeHtml(item.feedback || '')}</td>
             </tr>
         `).join('');
@@ -365,8 +377,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="table-responsive">
                 <table class="table table-sm table-striped mb-0">
-                    <thead><tr><th>Question</th><th>Marks</th><th>Similarity</th><th>Feedback</th></tr></thead>
-                    <tbody>${rows || '<tr><td colspan="4">No questions detected.</td></tr>'}</tbody>
+                    <thead><tr><th>Question</th><th>Marks</th><th>Similarity</th><th>Method</th><th>Feedback</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="5">No questions detected.</td></tr>'}</tbody>
                 </table>
             </div>
         `;

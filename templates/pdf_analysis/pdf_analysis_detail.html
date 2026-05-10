@@ -81,10 +81,16 @@
             <div class="col-md-3">
                 <div class="card analysis-card">
                     <div class="card-body text-center">
-                        <div class="score-badge text-warning">
-                            <i class="fas fa-check-circle"></i>
+                        <div class="score-badge {% if analysis_result.overall_score >= 70 %}text-success{% elif analysis_result.overall_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                            {% if analysis_result.overall_score >= 70 %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif analysis_result.overall_score >= 50 %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle"></i>
+                            {% endif %}
                         </div>
-                        <p class="mb-0">Status: {{ pdf_document.analysis_status|title }}</p>
+                        <p class="mb-0">Status: {% if analysis_result.overall_score >= 70 %}Passed{% elif analysis_result.overall_score >= 50 %}Average{% else %}Failed{% endif %}</p>
                     </div>
                 </div>
             </div>
