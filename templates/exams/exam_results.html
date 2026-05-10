@@ -7,6 +7,15 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-10">
+            {% if not submission %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-5 text-center">
+                        <h1 class="h4 fw-bold mb-2">No submitted attempt found</h1>
+                        <p class="text-muted mb-4">Start the exam first, then submit it to generate your result.</p>
+                        <a href="{% url 'take_exam' exam.id %}" class="btn btn-primary px-4">Take Exam</a>
+                    </div>
+                </div>
+            {% else %}
             <div class="card border-0 shadow-sm mb-5">
                 <div class="card-header bg-white py-4 border-0 text-center">
                     <h1 class="h3 fw-bold mb-2">Exam Results: {{ exam.title }}</h1>
@@ -17,7 +26,7 @@
                         <div class="col-md-4 mb-3 mb-md-0">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="small text-muted text-uppercase fw-bold mb-1">Score</div>
-                                <div class="h2 fw-bold mb-0 text-primary">{{ submission.total_marks_obtained }} / {{ exam.total_marks }}</div>
+                                <div class="h2 fw-bold mb-0 text-primary">{{ submission.total_marks_obtained }} / {{ total_possible|default:exam.total_marks }}</div>
                             </div>
                         </div>
                         <div class="col-md-4 mb-3 mb-md-0">
@@ -37,6 +46,11 @@
                     </div>
 
                     <h4 class="fw-bold mb-4">Detailed Analysis</h4>
+                    <div class="d-flex justify-content-end mb-3">
+                        <a href="?refresh_ai=1" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sync-alt me-1"></i>Recheck with AI
+                        </a>
+                    </div>
                     {% for answer in submission.answers.all %}
                         <div class="answer-card mb-4 p-4 border rounded-3 {% if answer.is_correct %}border-success-subtle bg-success-light{% elif answer.question.question_type == 'mcq' %}border-danger-subtle bg-danger-light{% endif %}">
                             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -67,10 +81,54 @@
                                     <div class="mb-3">
                                         <div class="small text-muted fw-bold mb-1 text-success">Correct Answer:</div>
                                         <div class="p-3 bg-white border border-success rounded text-success">
-                                            {% for option in answer.question.options.all %}
-                                                {% if option.is_correct %}{{ option.option_text }}{% endif %}
-                                            {% endfor %}
+                                            {{ answer.correct_answer_text|default:"Not available" }}
                                         </div>
+                                    </div>
+                                {% endif %}
+                                {% if answer.feedback %}
+                                    <div class="mb-3">
+                                        <div class="small text-muted fw-bold mb-1">AI Feedback:</div>
+                                        <div class="p-3 bg-white border rounded">{{ answer.feedback }}</div>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <div class="p-3 bg-white border rounded">
+                                            <div class="small text-muted fw-bold mb-1">AI Status</div>
+                                            {% if answer.evaluated_by_ai %}
+                                                <span class="badge bg-success">Evaluated</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Saved for Review</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 bg-white border rounded">
+                                            <div class="small text-muted fw-bold mb-1">Confidence</div>
+                                            {{ answer.confidence_score|floatformat:2 }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 bg-white border rounded">
+                                            <div class="small text-muted fw-bold mb-1">Method</div>
+                                            {{ answer.evaluationresult.evaluation_method|default:"local_nlp" }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if answer.evaluationresult %}
+                                    <div class="mb-3">
+                                        <div class="small text-muted fw-bold mb-1">AI Similarity</div>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar" role="progressbar" style="width: {% widthratio answer.evaluationresult.similarity_score 1 100 %}%"></div>
+                                        </div>
+                                        <div class="small text-muted mt-1">{{ answer.evaluationresult.similarity_score|floatformat:2 }}</div>
+                                    </div>
+                                {% endif %}
+                                {% if answer.feedback %}
+                                    <div class="mb-3">
+                                        <div class="small text-muted fw-bold mb-1">AI Feedback:</div>
+                                        <div class="p-3 bg-white border rounded">{{ answer.feedback }}</div>
                                     </div>
                                 {% endif %}
                             {% endif %}
@@ -82,6 +140,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+import re
 
 class Exam(models.Model):
     EXAM_TYPES = [
@@ -148,3 +149,19 @@ class Answer(models.Model):
     
     def __str__(self):
         return f"Answer for {self.question.question_text[:30]} by {self.submission.student.email}"
+
+    @property
+    def correct_answer_text(self):
+        correct_options = list(self.question.options.filter(is_correct=True))
+        if correct_options:
+            return ", ".join(option.option_text for option in correct_options)
+
+        feedback = self.feedback or ""
+        match = re.search(r"Correct answer:\s*(.+?)(?:\s*\||$)", feedback, flags=re.IGNORECASE | re.DOTALL)
+        if match:
+            return match.group(1).strip()
+
+        if self.is_correct and self.selected_option:
+            return self.selected_option.option_text
+
+        return ""

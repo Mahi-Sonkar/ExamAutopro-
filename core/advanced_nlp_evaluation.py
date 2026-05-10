@@ -53,7 +53,16 @@ class AdvancedNLPEvaluation:
     
     def __init__(self):
         self.lemmatizer = WordNetLemmatizer() if NLTK_AVAILABLE else None
-        self.stop_words = set(stopwords.words('english')) if NLTK_AVAILABLE else set()
+        self.stop_words = {
+            'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'is', 'are',
+            'was', 'were', 'be', 'been', 'to', 'of', 'in', 'on', 'for', 'with',
+            'by', 'as', 'at', 'from', 'that', 'this', 'it'
+        }
+        if NLTK_AVAILABLE:
+            try:
+                self.stop_words = set(stopwords.words('english'))
+            except LookupError:
+                logger.info("NLTK stopwords corpus unavailable; using built-in fallback list")
         
         # Advanced TF-IDF configuration
         self.tfidf_vectorizer = TfidfVectorizer(
@@ -105,6 +114,8 @@ class AdvancedNLPEvaluation:
                 text = ' '.join(tokens)
             except Exception as e:
                 logger.warning(f"NLTK preprocessing failed: {str(e)}")
+                tokens = re.findall(r'\b\w+\b', text)
+                text = ' '.join(token for token in tokens if token not in self.stop_words and len(token) > 1)
         
         return text
     

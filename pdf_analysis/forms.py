@@ -1,6 +1,9 @@
 from django import forms
 from django.core.validators import FileExtensionValidator
 from .models import PDFDocument
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PDFUploadForm(forms.ModelForm):
     """Form for uploading PDF documents"""
@@ -21,7 +24,7 @@ class PDFUploadForm(forms.ModelForm):
             }),
             'pdf_file': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': '.pdf',
+                'accept': '.pdf,.jpg,.jpeg,.png',
                 'required': True
             }),
             'document_type': forms.Select(attrs={
@@ -33,9 +36,9 @@ class PDFUploadForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pdf_file'].validators = [
-            FileExtensionValidator(allowed_extensions=['pdf'])
+            FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])
         ]
-        self.fields['pdf_file'].help_text = "Upload a PDF file (max 50MB)"
+        self.fields['pdf_file'].help_text = "Upload a PDF or image file (max 50MB)"
     
     def clean_pdf_file(self):
         """Validate PDF file"""
@@ -46,19 +49,22 @@ class PDFUploadForm(forms.ModelForm):
             if pdf_file.size > 50 * 1024 * 1024:
                 raise forms.ValidationError("PDF file size cannot exceed 50MB.")
             
-            # Check if file is actually a PDF
-            if not pdf_file.name.lower().endswith('.pdf'):
-                raise forms.ValidationError("Please upload a valid PDF file.")
+            allowed_extensions = ('.pdf', '.jpg', '.jpeg', '.png')
+            if not pdf_file.name.lower().endswith(allowed_extensions):
+                raise forms.ValidationError("Please upload a valid PDF or image file.")
             
             # Check MIME type (more lenient)
-            allowed_mime_types = ['application/pdf', 'application/x-pdf', 'application/octet-stream']
+            allowed_mime_types = [
+                'application/pdf', 'application/x-pdf', 'application/octet-stream',
+                'image/jpeg', 'image/png'
+            ]
             if pdf_file.content_type not in allowed_mime_types:
                 # Log the mismatch but allow if extension is .pdf
                 logger.warning(f"Lenient PDF upload: Unexpected content type {pdf_file.content_type} for {pdf_file.name}")
             
             # Double check extension just in case
-            if not pdf_file.name.lower().endswith('.pdf'):
-                raise forms.ValidationError("Only PDF files are allowed.")
+            if not pdf_file.name.lower().endswith(allowed_extensions):
+                raise forms.ValidationError("Only PDF, JPG, JPEG, and PNG files are allowed.")
         
         return pdf_file
     

@@ -65,7 +65,7 @@
                         <i class="fas fa-file-pdf fa-2x text-danger me-3"></i>
                         <div>
                             <h4 class="mb-0">Upload PDF Document</h4>
-                            <p class="text-muted mb-0">Upload a PDF for AI-powered analysis</p>
+                            <p class="text-muted mb-0">Upload a PDF or image for AI-powered analysis</p>
                         </div>
                     </div>
                 </div>
@@ -125,8 +125,8 @@
                                      style="border-color: #dee2e6; background-color: #f8f9fa;" id="upload-content">
                                     <div id="upload-prompt">
                                         <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                        <h5 class="text-muted">Drop PDF file here or click to browse</h5>
-                                        <p class="text-muted small">Maximum file size: 50MB | Supported format: PDF</p>
+                                        <h5 class="text-muted">Drop PDF/image here or click to browse</h5>
+                                        <p class="text-muted small">Maximum file size: 50MB | Supported: PDF, JPG, PNG</p>
                                     </div>
                                     <div id="file-info" style="display: none;">
                                         <!-- File details will be shown here -->
@@ -144,7 +144,7 @@
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
                             <strong>What happens after upload?</strong><br>
-                            1. AI extracts text from your PDF using OCR technology<br>
+                            1. AI extracts text from your PDF/image using OCR technology<br>
                             2. Natural Language Processing analyzes the content<br>
                             3. Questions are automatically detected and categorized<br>
                             4. Comprehensive analysis report is generated
@@ -161,6 +161,49 @@
                     </form>
                 </div>
             </div>
+
+            {% if request.user.role == 'teacher' %}
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-clipboard-check fa-2x text-success me-3"></i>
+                        <div>
+                            <h4 class="mb-0">Evaluate Handwritten Answer Sheet</h4>
+                            <p class="text-muted mb-0">Upload answer sheet and optional question paper image/PDF for question-wise marks</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form id="answer-sheet-eval-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Answer Sheet *</label>
+                                <input type="file" name="answer_sheet" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Question Paper</label>
+                                <input type="file" name="question_paper" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Total Marks</label>
+                                <input type="number" name="total_marks" class="form-control" min="1" step="0.5" placeholder="e.g. 100">
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Marking Scheme / Expected Answers</label>
+                                <textarea name="marking_scheme" class="form-control" rows="4" placeholder="Q1 [5 marks]: expected answer or keywords&#10;Q2 [10 marks]: model answer..."></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg" id="answer-sheet-eval-btn">
+                            <i class="fas fa-magic me-2"></i>Evaluate Answer Sheet
+                        </button>
+                    </form>
+                    <div class="result-container" id="answer-sheet-results"></div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -176,21 +219,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     const fileUploadArea = document.getElementById('file-upload-area');
     const fileInput = document.querySelector('input[type="file"]');
-    const uploadForm = document.getElementById('pdf-upload-form');
-    const resultsContainer = document.getElementById('results-container');
-    const resultContainer = document.querySelector('.result-container');
-    let uploadedFile = null;
 
     function updateFileDisplay(file) {
-        uploadedFile = file;
         document.getElementById('upload-prompt').style.display = 'none';
         document.getElementById('file-info').innerHTML = `
-            <i class="fas fa-file-pdf text-success me-2"></i>
+            <i class="fas fa-file-alt text-success me-2"></i>
             <strong>${file.name}</strong> (${(file.size / 1024 / 1024).toFixed(2)} MB)
         `;
         document.getElementById('file-info').style.display = 'block';
-        evaluatePdfBtn.style.display = 'inline-block';
-        startAnalysisBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Re-analyze';
     }
 
     // File select/open
@@ -201,10 +237,10 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
-            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            if (/\.(pdf|jpg|jpeg|png)$/i.test(file.name)) {
                 updateFileDisplay(file);
             } else {
-                alert('Please upload a valid PDF file.');
+                alert('Please upload a valid PDF, JPG, or PNG file.');
                 fileInput.value = '';
             }
         }
@@ -228,11 +264,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             const file = files[0];
-            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            if (/\.(pdf|jpg|jpeg|png)$/i.test(file.name)) {
                 fileInput.files = files;
                 updateFileDisplay(file);
             } else {
-                alert('Please upload a valid PDF file.');
+                alert('Please upload a valid PDF, JPG, or PNG file.');
             }
         }
     });
@@ -245,186 +281,107 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
     });
 
-    // Start analysis: submit upload form for backend processing
-    startAnalysisBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (!uploadedFile) {
-            alert('Please select a PDF file first');
-            return;
-        }
+    const answerEvalForm = document.getElementById('answer-sheet-eval-form');
+    if (answerEvalForm) {
+        answerEvalForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const button = document.getElementById('answer-sheet-eval-btn');
+            const results = document.getElementById('answer-sheet-results');
+            const original = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Evaluating...';
+            results.style.display = 'block';
+            results.innerHTML = '<div class="alert alert-info mb-0">OCR and AI/NLP evaluation is running...</div>';
 
-        analysisProgress.style.display = 'block';
-        startAnalysisBtn.style.display = 'none';
-        evaluatePdfBtn.style.display = 'none';
-        resultContainer.style.display = 'none';
-        uploadModal.show();
-        uploadForm.submit();
-    });
-
-    evaluatePdfBtn.addEventListener('click', function() {
-        if (!uploadedFile) {
-            alert('Please select a PDF file first');
-            return;
-        }
-        evaluateWithAI(uploadedFile);
-    });
-    
-    // Function to evaluate with AI
-    function evaluateWithAI(file) {
-        // Show loading state
-        evaluatePdfBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
-        evaluatePdfBtn.disabled = true;
-        resultContainer.style.display = 'none';
-        
-        // Create FormData for API call
-        const formData = new FormData();
-        formData.append('file', file);
-        // Make API call to evaluate PDF
-        fetch('/core/api/evaluate-pdf/', {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Hide loading state
-            evaluatePdfBtn.innerHTML = '<i class="fas fa-brain me-2"></i>Evaluate with AI';
-            evaluatePdfBtn.disabled = false;
-            
-            if (data.success) {
-                // Show results
-                showEvaluationResults(data);
-            } else {
-                // Show error
-                showError(data.error || 'Evaluation failed');
-            }
-        })
-        .catch(error => {
-            console.error('Evaluation error:', error);
-            evaluatePdfBtn.innerHTML = '<i class="fas fa-brain me-2"></i>Evaluate with AI';
-            evaluatePdfBtn.disabled = false;
-            showError('Evaluation failed: ' + error.message);
+            fetch('/pdf/api/evaluate/', {
+                method: 'POST',
+                body: new FormData(answerEvalForm),
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Evaluation failed');
+                }
+                renderAnswerSheetResults(data.results);
+            })
+            .catch(error => {
+                results.innerHTML = `<div class="alert alert-danger mb-0"><strong>Error:</strong> ${error.message}</div>`;
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerHTML = original;
+            });
         });
     }
-    
-    // Function to show evaluation results
-    function showEvaluationResults(data) {
-        resultContainer.style.display = 'block';
-        var resultsHtml = '<h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Evaluation Results</h5>';
-        resultsHtml += '<div class="row">';
-        resultsHtml += '<div class="col-md-6">';
-        resultsHtml += '<div class="card border-0">';
-        resultsHtml += '<div class="card-body">';
-        resultsHtml += '<h6 class="text-primary">Total Marks: ' + data.evaluation.total_marks + '/' + data.evaluation.max_marks + '</h6>';
-        resultsHtml += '<div class="progress mb-2">';
-        resultsHtml += '<div class="progress-bar" style="width: ' + data.evaluation.percentage + '%"></div>';
-        resultsHtml += '</div>';
-        resultsHtml += '<small class="text-muted">Percentage: ' + data.evaluation.percentage + '%</small>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        resultsHtml += '<div class="col-md-6">';
-        resultsHtml += '<div class="card border-0">';
-        resultsHtml += '<div class="card-body">';
-        resultsHtml += '<h6 class="text-info">Questions Found: ' + data.evaluation.answers_found + '/' + data.evaluation.total_questions + '</h6>';
-        resultsHtml += '<small class="text-muted">Answers processed successfully</small>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        resultsHtml += '<div class="mt-3">';
-        resultsHtml += '<h6><i class="fas fa-list me-2"></i>Detailed Results</h6>';
-        resultsHtml += '<div class="table-responsive">';
-        resultsHtml += '<table class="table table-striped">';
-        resultsHtml += '<thead>';
-        resultsHtml += '<tr>';
-        resultsHtml += '<th>Question</th>';
-        resultsHtml += '<th>Similarity</th>';
-        resultsHtml += '<th>Marks</th>';
-        resultsHtml += '<th>Max Marks</th>';
-        resultsHtml += '</tr>';
-        resultsHtml += '</thead>';
-        resultsHtml += '<tbody>';
-        
-        var resultsArray = Array.isArray(data.evaluation.results)
-            ? data.evaluation.results
-            : Object.values(data.evaluation.results || {});
 
-        for (var i = 0; i < resultsArray.length; i++) {
-            var result = resultsArray[i];
-            var qKey = result.question || ('Q' + (i + 1));
-            var similarity = (typeof result.similarity === 'number') ? result.similarity : 0;
-            resultsHtml += '<tr>';
-            resultsHtml += '<td>' + qKey + '</td>';
-            resultsHtml += '<td>' + (similarity * 100).toFixed(1) + '%</td>';
-            resultsHtml += '<td>' + (result.marks ?? '-') + '</td>';
-            resultsHtml += '<td>' + result.max_marks + '</td>';
-            resultsHtml += '</tr>';
-        }
-        
-        resultsHtml += '</tbody>';
-        resultsHtml += '</table>';
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-        
-        resultContainer.innerHTML = resultsHtml;
-    }
-    
-    // Function to show error
-    function showError(message) {
-        resultContainer.style.display = 'block';
-        resultContainer.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>Error:</strong> ${message}
+    function renderAnswerSheetResults(result) {
+        const results = document.getElementById('answer-sheet-results');
+        const final = result.final_results || {};
+        const answerExtraction = result.answer_extraction || {};
+        const questionDetection = result.question_detection || {};
+        const rows = (((result.evaluation || {}).evaluation_results) || []).map(item => `
+            <tr>
+                <td>Q${escapeHtml(item.question_number)}</td>
+                <td>${Number(item.marks_awarded || 0).toFixed(2)} / ${Number(item.max_marks || 0).toFixed(2)}</td>
+                <td>${(Number(item.similarity_score || 0) * 100).toFixed(1)}%</td>
+                <td>${escapeHtml(item.feedback || '')}</td>
+            </tr>
+        `).join('');
+
+        results.style.display = 'block';
+        results.innerHTML = `
+            <h5 class="mb-3">Question-wise Result</h5>
+            <div class="row mb-3">
+                <div class="col-md-4"><div class="p-3 bg-white border rounded"><strong>${Number(final.total_marks_obtained || 0).toFixed(2)}</strong> / ${Number(final.total_marks_possible || 0).toFixed(2)} marks</div></div>
+                <div class="col-md-4"><div class="p-3 bg-white border rounded"><strong>${Number(final.percentage || 0).toFixed(1)}%</strong> percentage</div></div>
+                <div class="col-md-4"><div class="p-3 bg-white border rounded"><strong>${escapeHtml(final.grade || '-')}</strong> grade</div></div>
+            </div>
+            <div class="accordion mb-3" id="ocrTextAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#answerTextPanel">
+                            Extracted Answer Sheet Text (${escapeHtml(answerExtraction.method_used || 'OCR')}, confidence ${Number(answerExtraction.confidence || 0).toFixed(1)}%)
+                        </button>
+                    </h2>
+                    <div id="answerTextPanel" class="accordion-collapse collapse" data-bs-parent="#ocrTextAccordion">
+                        <div class="accordion-body">
+                            <pre class="mb-0 small bg-white border rounded p-3" style="white-space: pre-wrap;">${escapeHtml(answerExtraction.text || 'No text extracted.')}</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#questionTextPanel">
+                            Extracted Question Paper Text
+                        </button>
+                    </h2>
+                    <div id="questionTextPanel" class="accordion-collapse collapse" data-bs-parent="#ocrTextAccordion">
+                        <div class="accordion-body">
+                            <pre class="mb-0 small bg-white border rounded p-3" style="white-space: pre-wrap;">${escapeHtml(questionDetection.raw_text || 'No question paper text extracted or question paper was not uploaded.')}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead><tr><th>Question</th><th>Marks</th><th>Similarity</th><th>Feedback</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4">No questions detected.</td></tr>'}</tbody>
+                </table>
             </div>
         `;
     }
 
-    // Guard in case user submits via Enter key
-    uploadForm.addEventListener('submit', function() {
-        uploadModal.show();
-    });
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
 
     console.log('PDF upload page initialized with working analysis button');
 });
-
-// Simple file upload functionality
-if (fileUploadArea && fileInput) {
-    fileUploadArea.addEventListener('click', () => fileInput.click());
-    
-    fileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file && file.type === 'application/pdf') {
-            updateFileDisplay(file);
-        } else {
-            alert('Please select a PDF file');
-        }
-    });
-    
-    // Drag and drop
-    fileUploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.add('dragover');
-    });
-    
-    fileUploadArea.addEventListener('dragleave', () => {
-        fileUploadArea.classList.remove('dragover');
-    });
-    
-    fileUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.remove('dragover');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && files[0].type === 'application/pdf') {
-            fileInput.files = files;
-            updateFileDisplay(files[0]);
-        }
-    });
-}
 </script>
 {% endblock %}
-
-</html>

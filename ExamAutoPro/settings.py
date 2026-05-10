@@ -16,6 +16,15 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+ENV_FILE = BASE_DIR / '.env'
+if ENV_FILE.exists():
+    for line in ENV_FILE.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -172,6 +181,16 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:58779',
     'http://localhost:58779',
+    'http://127.0.0.1:51817',
+    'http://localhost:51817',
+    'http://127.0.0.1:53633',
+    'http://localhost:53633',
+    'http://127.0.0.1:51336',
+    'http://localhost:51336',
+    'http://127.0.0.1:63721',
+    'http://localhost:63721',
+    'http://127.0.0.1:53849',
+    'http://localhost:53849',
 ]
 
 # File Upload Settings

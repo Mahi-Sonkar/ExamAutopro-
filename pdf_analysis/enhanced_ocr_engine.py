@@ -21,6 +21,7 @@ class EnhancedOCREngine:
     def __init__(self):
         # Set Tesseract path
         tesseract_paths = [
+            os.environ.get('TESSERACT_CMD', ''),
             r"C:\Program Files\Tesseract-OCR\tesseract.exe",
             r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
             r"C:\Tesseract-OCR\tesseract.exe"
@@ -41,13 +42,13 @@ class EnhancedOCREngine:
                 vision_result = google_vision.extract_text_from_pdf(pdf_path)
                 
                 # Check if we got any meaningful text
-                if vision_result.get('text') and len(vision_result['text'].strip()) > 50:
+                if vision_result.get('success') and vision_result.get('text') and len(vision_result['text'].strip()) > 10:
                     logger.info("Google Vision OCR successful")
                     return {
                         'text': self._enhance_text(vision_result['text']),
                         'confidence': vision_result.get('confidence', 95.0),
                         'page_count': vision_result.get('page_count', 1),
-                        'method_used': 'google_vision_ocr'
+                        'method_used': vision_result.get('method', 'vision_ocr')
                     }
                 else:
                     logger.warning("Google Vision returned empty or insufficient text. Falling back to Tesseract.")
@@ -55,8 +56,12 @@ class EnhancedOCREngine:
                 logger.info("Google Vision is not active. Using Tesseract for OCR.")
 
             # Step 2: Fallback to Tesseract (Good for printed text)
-            # Convert PDF to high-quality images
-            images = convert_from_path(pdf_path, dpi=300, fmt='jpeg')
+            file_ext = os.path.splitext(pdf_path)[1].lower()
+            if file_ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff']:
+                images = [Image.open(pdf_path).convert('RGB')]
+            else:
+                # Convert PDF to high-quality images
+                images = convert_from_path(pdf_path, dpi=300, fmt='jpeg')
             
             all_text = []
             total_confidence = 0
@@ -107,8 +112,14 @@ class EnhancedOCREngine:
             
         except Exception as e:
             logger.error(f"Enhanced OCR failed: {str(e)}")
-            # Fallback to mock data
-            return self._get_fallback_result()
+            return {
+                'text': '',
+                'confidence': 0.0,
+                'page_count': 0,
+                'method_used': 'ocr_failed',
+                'success': False,
+                'error': str(e)
+            }
     
     def _preprocess_image(self, image):
         """Advanced image preprocessing for perfect OCR with scanned documents"""
@@ -192,8 +203,10 @@ class EnhancedOCREngine:
         if not text:
             return ""
         
-        # Remove excessive whitespace
-        text = re.sub(r'\s+', ' ', text)
+        # Preserve line breaks because answer/question numbering often depends on them.
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
         
         # Fix common OCR errors
         ocr_fixes = {
@@ -222,29 +235,8 @@ class EnhancedOCREngine:
         # Fix spacing around punctuation
         text = re.sub(r'\s+([?.!,])', r'\1', text)
         
-        return text.strip()
+        lines = [re.sub(r'[ \t]+', ' ', line).strip() for line in text.split('\n')]
+        return '\n'.join(line for line in lines if line).strip()
     
-    def _get_fallback_result(self):
-        """Get fallback result for demonstration"""
-        fallback_text = """
-        What is machine learning and how does it work?
-        Explain the concept of neural networks in detail.
-        How does deep learning differ from traditional machine learning?
-        What are the main types of machine learning algorithms?
-        Why is data preprocessing important in machine learning?
-        Describe the process of training a machine learning model.
-        What is overfitting and how can it be prevented?
-        Explain the role of feature selection in machine learning.
-        How do you evaluate the performance of a machine learning model?
-        What are the ethical considerations in artificial intelligence?
-        """
-        
-        return {
-            'text': fallback_text.strip(),
-            'confidence': 85.0,
-            'page_count': 5,
-            'method_used': 'fallback'
-        }
-
 # Global instance
 enhanced_ocr = EnhancedOCREngine()

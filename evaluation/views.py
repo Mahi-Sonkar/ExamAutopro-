@@ -48,6 +48,11 @@ class ScoringRangeCreateView(LoginRequiredMixin, CreateView):
     form_class = ScoringRangeForm
     template_name = 'evaluation/scoring_range_form.html'
     success_url = reverse_lazy('evaluation:scoring_range_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
     
     def get_initial(self):
         initial = super().get_initial()
@@ -92,6 +97,11 @@ class ScoringRangeUpdateView(LoginRequiredMixin, UpdateView):
     form_class = ScoringRangeForm
     template_name = 'evaluation/scoring_range_form.html'
     success_url = reverse_lazy('evaluation:scoring_range_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
     
     def get_queryset(self):
         if self.request.user.role == 'teacher':
@@ -307,10 +317,10 @@ def evaluate_answer(request, answer_id):
     answer = get_object_or_404(Answer, id=answer_id)
     
     # Check permissions
-    if request.user.role == 'student' and answer.exam_submission.student != request.user:
+    if request.user.role == 'student' and answer.submission.student != request.user:
         return redirect('dashboard')
     
-    if request.user.role == 'teacher' and answer.exam_submission.exam.teacher != request.user:
+    if request.user.role == 'teacher' and answer.submission.exam.teacher != request.user:
         return redirect('dashboard')
     
     try:

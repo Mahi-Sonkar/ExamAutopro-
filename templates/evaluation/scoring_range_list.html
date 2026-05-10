@@ -13,6 +13,9 @@
                     Scoring Ranges
                 </h1>
                 <div class="d-flex gap-2">
+                    <a href="{% url 'pdf_upload' %}" class="btn btn-success">
+                        <i class="fas fa-clipboard-check me-1"></i>Evaluate Answer Sheet
+                    </a>
                     <a href="{% url 'evaluation:scoring_range_create' %}" class="btn btn-primary">
                         <i class="fas fa-plus-circle me-1"></i>Create New Range
                     </a>
@@ -64,6 +67,7 @@
                                         <th>Rule Name</th>
                                         <th>Similarity Range</th>
                                         <th>Marks Awarded</th>
+                                        <th>Question Setup</th>
                                         <th>Scope (Exam)</th>
                                         <th>Status</th>
                                         <th class="text-end">Actions</th>
@@ -92,8 +96,14 @@
                                                 <small class="text-muted">of total marks</small>
                                             </td>
                                             <td>
+                                                <small class="d-block">{{ rule.total_questions }} questions</small>
+                                                <small class="text-muted">{{ rule.total_marks|floatformat:2 }} total, {{ rule.marks_per_question|floatformat:2 }} each</small>
+                                            </td>
+                                            <td>
                                                 {% if rule.exam %}
                                                     <span class="badge bg-secondary">{{ rule.exam.title|truncatechars:30 }}</span>
+                                                {% elif rule.pdf_document %}
+                                                    <span class="badge bg-info text-dark">{{ rule.pdf_document.title|truncatechars:30 }}</span>
                                                 {% else %}
                                                     <span class="badge bg-dark">Global</span>
                                                 {% endif %}
@@ -118,7 +128,7 @@
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="6" class="text-center py-4">
+                                            <td colspan="7" class="text-center py-4">
                                                 <div class="text-muted">
                                                     <i class="fas fa-chart-line fa-3x mb-3"></i>
                                                     <h5>No Scoring Ranges Found</h5>

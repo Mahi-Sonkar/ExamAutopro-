@@ -751,6 +751,9 @@ def evaluate_answer_sheet_api(request):
         
         answer_sheet = request.FILES['answer_sheet']
         question_paper = request.FILES.get('question_paper', None)
+        marking_scheme_text = request.POST.get('marking_scheme', '').strip()
+        total_marks = request.POST.get('total_marks', '').strip()
+        total_marks = float(total_marks) if total_marks else None
         
         # Validate file types
         if not answer_sheet.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png')):
@@ -777,12 +780,21 @@ def evaluate_answer_sheet_api(request):
         if not scoring_rules:
             from evaluation.models import ScoringRange
             scoring_ranges = ScoringRange.objects.filter(is_active=True).order_by('-min_similarity')
+            if request.user.is_authenticated and getattr(request.user, 'role', None) == 'teacher':
+                scoring_ranges = scoring_ranges.filter(created_by=request.user)
             for sr in scoring_ranges:
                 scoring_rules[sr.name.lower()] = {
                     'range': (sr.min_similarity * 100, sr.max_similarity * 100),
                     'marks_percentage': sr.marks_percentage,
-                    'criteria': [sr.description or sr.name]
+                    'criteria': [sr.description or sr.name],
+                    'total_questions': sr.total_questions,
+                    'total_marks': sr.total_marks,
+                    'marks_per_question': sr.marks_per_question,
                 }
+            if total_marks is None:
+                marks_source = scoring_ranges.exclude(total_marks=0).first()
+                if marks_source:
+                    total_marks = float(marks_source.total_marks)
         
         # Initialize evaluation engine
         from .answer_evaluation_engine import AnswerEvaluationEngine
@@ -813,12 +825,17 @@ def evaluate_answer_sheet_api(request):
             evaluation_result = engine.evaluate_complete_paper(
                 answer_sheet_path=answer_sheet_path,
                 question_paper_path=question_paper_path,
-                scoring_rules=scoring_rules
+                scoring_rules=scoring_rules,
+                marking_scheme_text=marking_scheme_text,
+                total_marks=total_marks
             )
             
             if evaluation_result['success']:
                 # Save results to database if user is authenticated
                 if request.user.is_authenticated:
+                    answer_sheet.seek(0)
+                    if question_paper:
+                        question_paper.seek(0)
                     _save_evaluation_results(request.user, evaluation_result, answer_sheet, question_paper)
                 
                 return JsonResponse({
@@ -851,8 +868,6 @@ def _save_evaluation_results(user, evaluation_result, answer_sheet_file, questio
     """
     try:
         from .models import PDFDocument, PDFAnalysisResult
-        from evaluation.models import EvaluationResult, Question, QuestionPaper
-        import uuid
         
         # Create PDF document for answer sheet
         answer_doc = PDFDocument.objects.create(
@@ -877,78 +892,7 @@ def _save_evaluation_results(user, evaluation_result, answer_sheet_file, questio
             content_analysis=evaluation_result['evaluation'],
             question_analysis=evaluation_result['evaluation']['evaluation_results']
         )
-        
-        # Create question paper if provided
-        question_paper_obj = None
-        if question_paper_file:
-            question_paper_obj = QuestionPaper.objects.create(
-                title=f"Question Paper - {question_paper_file.name}",
-                description="Automatically detected questions",
-                created_by=user
-            )
-            
-            # Save detected questions
-            for i, q_data in enumerate(evaluation_result['question_detection']['questions']):
-                Question.objects.create(
-                    question_paper=question_paper_obj,
-                    question_number=i + 1,
-                    question_text=q_data.get('question', ''),
-                    question_type=q_data.get('type', 'short_answer'),
-                    marks=int(q_data.get('weight', 1.0) * 10),
-                    model_answer=''  # Would need to be provided separately
-                )
-        
-        # Create evaluation result (using the correct model structure)
-        # Note: EvaluationResult model expects an 'answer' field pointing to exams.Answer
-        # For PDF analysis, we'll create a simple Answer object first
-        from exams.models import Answer, Question, QuestionOption, Exam
-        
-        # Create a dummy exam for this analysis if needed
-        dummy_exam = Exam.objects.create(
-            title=f"PDF Analysis - {answer_doc.title}",
-            description="Auto-generated from PDF analysis",
-            teacher=request.user if request.user.is_authenticated else User.objects.filter(role='teacher').first(),
-            total_marks=evaluation_result['final_results']['total_marks_possible'],
-            duration=60,
-            status='completed'
-        )
-        
-        # Create dummy questions for each detected question
-        created_questions = []
-        for i, q_data in enumerate(evaluation_result.get('detected_questions', [])):
-            question = Question.objects.create(
-                exam=dummy_exam,
-                question_text=q_data.get('question', f'Question {i+1}'),
-                question_type='descriptive',
-                marks=evaluation_result['final_results']['total_marks_possible'] // len(evaluation_result.get('detected_questions', [1])),
-                model_answer=q_data.get('expected_answer', '')
-            )
-            created_questions.append(question)
-        
-        # Create answers for each question
-        for i, (question, q_data) in enumerate(zip(created_questions, evaluation_result.get('detected_questions', []))):
-            answer = Answer.objects.create(
-                submission=None,  # No submission for PDF analysis
-                question=question,
-                answer_text=q_data.get('detected_answer', ''),
-                marks_obtained=evaluation_result['final_results']['question_scores'].get(f'q{i+1}', {}).get('score', 0),
-                evaluated_by_ai=True
-            )
-            
-            # Create evaluation result for each answer
-            EvaluationResult.objects.create(
-                answer=answer,
-                similarity_score=q_data.get('similarity', 0.0),
-                keyword_match_score=0.0,
-                confidence_score=q_data.get('confidence', 0.0),
-                initial_score=q_data.get('score', 0.0),
-                grace_marks_applied=0.0,
-                final_score=q_data.get('score', 0.0),
-                feedback=q_data.get('feedback', 'Auto-generated from PDF analysis'),
-                evaluation_method='pdf_ocr'
-            )
-        
-        # Note: Removed problematic lines 888-891 that were causing syntax error
+        return answer_doc
         
     except Exception as e:
         import logging

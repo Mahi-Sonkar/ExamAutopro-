@@ -260,11 +260,11 @@
                             <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
                         </li>
                     {% endif %}
-                    
+
                     <li class="page-item active">
                         <span class="page-link">{{ page_obj.number }}</span>
                     </li>
-                    
+
                     {% if page_obj.has_next %}
                         <li class="page-item">
                             <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
@@ -340,68 +340,219 @@
  * Used as a fallback or direct action.
  */
 function confirmDeleteImmediate(documentId, documentTitle) {
-    const documentTitleSpan = document.getElementById('documentTitle');
-    if (documentTitleSpan) documentTitleSpan.textContent = documentTitle;
-    
-    const deleteForm = document.getElementById('deleteForm');
-    if (deleteForm) {
-        deleteForm.action = `/pdf/${documentId}/delete/`;
-        
-        // Try to show Bootstrap modal first
-        const deleteModal = document.getElementById('deleteModal');
-        if (typeof bootstrap !== 'undefined' && deleteModal) {
-            try {
-                const modal = new bootstrap.Modal(deleteModal);
-                modal.show();
-                return;
-            } catch (e) {
-                console.warn('Bootstrap Modal failed, using browser confirm', e);
+    // AJAX deletion without page reload (same as confirmDelete)
+    try {
+        // Clean up any existing backdrops first
+        cleanupModalBackdrop();
+
+        // Find the table row element
+        const deleteButton = event.target.closest('button');
+        const tableRow = deleteButton.closest('tr');
+
+        // Show loading state on button
+        const originalContent = deleteButton.innerHTML;
+        deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        deleteButton.disabled = true;
+
+        // Perform AJAX deletion
+        fetch(`/pdf/${documentId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (response.ok) {
+                // Remove the table row with animation
+                if (tableRow) {
+                    tableRow.style.transition = 'opacity 0.3s';
+                    tableRow.style.opacity = '0';
+                    setTimeout(() => {
+                        tableRow.remove();
+                        // Show success message
+                        showNotification(`PDF "${documentTitle}" has been deleted successfully.`, 'success');
+                    }, 300);
+                }
+            } else {
+                throw new Error('Deletion failed');
             }
-        }
-        
-        // Fallback to native confirm
-        if (confirm(`Are you sure you want to delete "${documentTitle}"?`)) {
-            deleteForm.submit();
-        }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            // Restore button and show error
+            deleteButton.innerHTML = originalContent;
+            deleteButton.disabled = false;
+            showNotification(`Error deleting PDF "${documentTitle}". Please try again.`, 'error');
+        });
+
+        return false; // Prevent default action
+    } catch (error) {
+        console.error('Delete error:', error);
+        showNotification('Error occurred while deleting PDF.', 'error');
+        return false;
     }
 }
 
 function confirmDelete(documentTitle, documentId) {
+    // AJAX deletion without page reload
     try {
-        // Set document title in modal
-        const titleSpan = document.getElementById('deleteDocumentTitle');
-        if (titleSpan) {
-            titleSpan.textContent = documentTitle;
-        }
-        
-        // Set form action
-        const deleteForm = document.getElementById('deleteForm');
-        if (deleteForm) {
-            deleteForm.action = `/pdf/${documentId}/delete/`;
-        }
-        
-        // Show modal
-        const deleteModal = document.getElementById('deleteModal');
-        if (deleteModal && typeof bootstrap !== 'undefined') {
-            try {
-                const modal = new bootstrap.Modal(deleteModal);
-                modal.show();
-                return false; // Prevent default link navigation
-            } catch (e) {
-                console.warn('Bootstrap Modal failed, using browser confirm', e);
-                // Fallback to browser confirm
-                return confirm(`Are you sure you want to delete "${documentTitle}"?`);
+        // Clean up any existing backdrops first
+        cleanupModalBackdrop();
+
+        // Find the table row element
+        const deleteButton = event.target.closest('a');
+        const tableRow = deleteButton.closest('tr');
+
+        // Show loading state on button
+        const originalContent = deleteButton.innerHTML;
+        deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        deleteButton.disabled = true;
+
+        // Perform AJAX deletion
+        fetch(`/pdf/${documentId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (response.ok) {
+                // Remove the table row with animation
+                if (tableRow) {
+                    tableRow.style.transition = 'opacity 0.3s';
+                    tableRow.style.opacity = '0';
+                    setTimeout(() => {
+                        tableRow.remove();
+                        // Show success message
+                        showNotification(`PDF "${documentTitle}" has been deleted successfully.`, 'success');
+                    }, 300);
+                }
+            } else {
+                throw new Error('Deletion failed');
             }
-        } else {
-            // Fallback to browser confirm
-            return confirm(`Are you sure you want to delete "${documentTitle}"?`);
-        }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            // Restore button and show error
+            deleteButton.innerHTML = originalContent;
+            deleteButton.disabled = false;
+            showNotification(`Error deleting PDF "${documentTitle}". Please try again.`, 'error');
+        });
+
+        return false; // Prevent default link navigation
     } catch (error) {
-        console.error('Delete confirmation error:', error);
-        // Last resort fallback
-        return confirm(`Delete "${documentTitle}"?`);
+        console.error('Delete error:', error);
+        showNotification('Error occurred while deleting PDF.', 'error');
+        return false;
     }
 }
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Helper function to show notifications
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    // Add to page
+    document.body.appendChild(notification);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Aggressive modal backdrop cleanup function
+function cleanupModalBackdrop() {
+    console.log('Cleaning up modal backdrop...');
+
+    // Remove all modal backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => {
+        backdrop.remove();
+        console.log('Removed backdrop element');
+    });
+
+    // Hide all modals
+    const modals = document.querySelectorAll('.modal.show');
+    modals.forEach(modal => {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        console.log('Hidden modal element');
+    });
+
+    // Remove modal classes from body
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+
+    // Remove any remaining backdrop elements by force
+    const remainingBackdrops = document.querySelectorAll('[class*="backdrop"]');
+    remainingBackdrops.forEach(element => element.remove());
+
+    console.log('Modal backdrop cleanup completed');
+}
+
+// Immediate cleanup on any click outside modal
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-backdrop')) {
+        cleanupModalBackdrop();
+    }
+});
+
+// Force cleanup on page visibility changes
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        cleanupModalBackdrop();
+    }
+});
+
+// Cleanup on escape key press
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cleanupModalBackdrop();
+    }
+});
+
+// Continuous monitoring for stuck backdrops
+function monitorBackdrop() {
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    const modals = document.querySelectorAll('.modal.show');
+
+    // If backdrops exist but no modals are showing, cleanup
+    if (backdrops.length > 0 && modals.length === 0) {
+        console.log('Detected stuck backdrop, cleaning up...');
+        cleanupModalBackdrop();
+    }
+}
+
+// Monitor every 2 seconds
+setInterval(monitorBackdrop, 2000);
 
 // Handle modal delete button click
 document.addEventListener('DOMContentLoaded', function() {
@@ -413,12 +564,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show loading state
                 confirmDeleteBtn.disabled = true;
                 confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
-                
+
                 // Submit form
                 deleteForm.submit();
             }
         });
     }
+
+    // Auto-cleanup any stuck backdrops every 5 seconds
+    setInterval(function() {
+        const modals = document.querySelectorAll('.modal.show');
+        if (modals.length === 0) {
+            cleanupModalBackdrop();
+        }
+    }, 5000);
+
+    // Cleanup on page load
+    setTimeout(cleanupModalBackdrop, 100);
 });
 </script>
 {% endblock %}

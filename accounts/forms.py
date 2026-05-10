@@ -13,17 +13,18 @@ class UserRegistrationForm(UserCreationForm):
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'Enter your first name',
-            'pattern': '[A-Za-z]+',
-            'title': 'Only alphabets are allowed'
+            'pattern': '[A-Za-z\\s]+',
+            'title': 'Only alphabets and spaces are allowed'
         })
     )
     
-    # Override last_name field with alphabet-only validation
+    # Override last_name field with alphabet-only validation (optional)
     last_name = forms.CharField(
         max_length=150,
+        required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your last name',
+            'placeholder': 'Enter your last name (optional)',
             'pattern': '[A-Za-z]+',
             'title': 'Only alphabets are allowed'
         })
@@ -45,8 +46,17 @@ class UserRegistrationForm(UserCreationForm):
     
     def clean_first_name(self):
         first_name = self.cleaned_data.get('first_name')
-        if first_name and not first_name.isalpha():
-            raise forms.ValidationError('First name should contain only alphabets.')
+        if first_name:
+            # Remove leading/trailing spaces and check if contains only alphabets and spaces
+            trimmed_name = first_name.strip()
+            if not trimmed_name:
+                raise forms.ValidationError('First name cannot be empty.')
+            # Check if contains only alphabets and spaces
+            if not all(char.isalpha() or char.isspace() for char in trimmed_name):
+                raise forms.ValidationError('First name should contain only alphabets and spaces.')
+            # Check if it's not just spaces
+            if not any(char.isalpha() for char in trimmed_name):
+                raise forms.ValidationError('First name must contain at least one alphabet.')
         return first_name
     
     def clean_last_name(self):

@@ -16,7 +16,7 @@
                 <div id="exam-timer" class="h4 mb-0 fw-bold font-monospace text-primary">--:--:--</div>
             </div>
             <div>
-                <button type="submit" class="btn btn-danger fw-bold px-4" form="exam-form">
+                <button type="submit" class="btn btn-danger fw-bold px-4" form="exam-form" id="submit-exam-btn">
                     Submit Exam
                 </button>
             </div>
@@ -33,7 +33,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex flex-wrap gap-2" id="question-nav">
                         {% for question in questions %}
-                            <a href="#question-{{ question.id }}" class="btn btn-outline-secondary btn-sm question-nav-btn" 
+                            <a href="#question-{{ question.id }}" class="btn btn-outline-secondary btn-sm question-nav-btn"
                                style="width: 40px; height: 40px; line-height: 28px;" id="nav-q-{{ question.id }}">
                                 {{ forloop.counter }}
                             </a>
@@ -61,9 +61,9 @@
                                 <span class="badge bg-light text-dark fw-bold">QUESTION {{ forloop.counter }}</span>
                                 <span class="text-muted small">{{ question.marks }} Marks</span>
                             </div>
-                            
+
                             <h5 class="fw-bold mb-4">{{ question.question_text|linebreaks }}</h5>
-                            
+
                             {% if question.has_image and question.question_image %}
                                 <div class="mb-4">
                                     <img src="{{ question.question_image.url }}" class="img-fluid rounded border" style="max-height: 300px;">
@@ -75,7 +75,7 @@
                                     <div class="list-group">
                                         {% for option in question.options.all %}
                                             <label class="list-group-item list-group-item-action border-0 bg-light rounded-3 mb-2 p-3 d-flex align-items-center cursor-pointer">
-                                                <input type="radio" name="question_{{ question.id }}" value="{{ option.id }}" 
+                                                <input type="radio" name="question_{{ question.id }}" value="{{ option.id }}"
                                                        class="form-check-input me-3" data-question-id="{{ question.id }}">
                                                 <span>{{ option.option_text }}</span>
                                             </label>
@@ -84,14 +84,14 @@
                                 {% else %}
                                     <div class="mb-3">
                                         <div class="form-floating mb-2">
-                                            <textarea name="question_{{ question.id }}" class="form-control descriptive-answer" 
-                                                      placeholder="Type your answer here..." style="height: 200px" 
+                                            <textarea name="question_{{ question.id }}" class="form-control descriptive-answer"
+                                                      placeholder="Type your answer here..." style="height: 200px"
                                                       data-question-id="{{ question.id }}"></textarea>
                                             <label>Your Answer</label>
                                         </div>
                                         <div class="file-upload-section">
                                             <label class="form-label small text-muted">Or upload a handwritten answer (PDF/Image):</label>
-                                            <input type="file" name="file_{{ question.id }}" class="form-control form-control-sm" 
+                                            <input type="file" name="file_{{ question.id }}" class="form-control form-control-sm"
                                                    accept=".pdf,image/*" data-question-id="{{ question.id }}">
                                         </div>
                                     </div>
@@ -105,29 +105,7 @@
     </div>
 </div>
 
-<!-- Submit Confirmation Modal -->
-<div class="modal fade" id="submitModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Submit Your Exam?</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body py-4">
-                <p class="mb-0">Are you sure you want to submit your exam? You won't be able to change your answers after submission.</p>
-                <div class="alert alert-warning mt-3 mb-0 py-2 small">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Please ensure all questions are answered.
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Go Back</button>
-                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="submitExamForm();">
-                    Yes, Submit Now
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Submit Modal Removed - Direct Submission Implemented -->
 
 <!-- Proctoring Overlay -->
 <div id="proctoring-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark text-white d-none flex-column align-items-center justify-content-center" style="z-index: 9999; opacity: 0.98;">
@@ -147,10 +125,46 @@
 </style>
 
 <script>
-    // Timer Logic
-    const examDuration = {{ exam.duration }}; // minutes
-    const startTime = new Date('{{ submission.started_at|date:"Y-m-d H:i:s" }}').getTime();
-    const endTime = startTime + (examDuration * 60 * 1000);
+    // Timer Logic - Debug version
+    let examDuration = 60; // Default fallback
+    let startTime, endTime;
+    let isExamEnded = false;
+    let isSubmittingExam = false;
+    let timerInterval = null;
+
+    // Try to get exam duration safely
+    try {
+        examDuration = parseInt('{{ exam.duration|default:60 }}') || 60;
+        console.log('Exam duration from template:', examDuration);
+    } catch (e) {
+        console.log('Error getting exam duration, using default:', e);
+        examDuration = 60;
+    }
+
+    startTime = Date.parse('{{ submission.started_at|date:"c" }}');
+    endTime = Date.parse('{{ expires_at|date:"c" }}');
+    if (isNaN(startTime)) {
+        startTime = new Date().getTime();
+    }
+    if (isNaN(endTime)) {
+        endTime = startTime + (examDuration * 60 * 1000);
+    }
+
+    console.log('Final timer values:', {
+        duration: examDuration,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime)
+    });
+
+    // Initialize timer immediately
+    function initializeTimer() {
+        console.log('Initializing timer with duration:', examDuration, 'minutes');
+
+        // Update timer immediately
+        updateTimer();
+        // Then update every second
+        timerInterval = setInterval(updateTimer, 1000);
+    }
 
     function updateTimer() {
         const now = new Date().getTime();
@@ -159,6 +173,8 @@
         if (distance < 0) {
             clearInterval(timerInterval);
             document.getElementById("exam-timer").innerHTML = "EXPIRED";
+            isSubmittingExam = true;
+            isExamEnded = true;
             document.getElementById("exam-form").submit();
             return;
         }
@@ -167,25 +183,40 @@
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        document.getElementById("exam-timer").innerHTML = 
-            (hours < 10 ? "0" + hours : hours) + ":" + 
-            (minutes < 10 ? "0" + minutes : minutes) + ":" + 
+        document.getElementById("exam-timer").innerHTML =
+            (hours < 10 ? "0" + hours : hours) + ":" +
+            (minutes < 10 ? "0" + minutes : minutes) + ":" +
             (seconds < 10 ? "0" + seconds : seconds);
-        
+
         if (distance < (5 * 60 * 1000)) { // Less than 5 mins
             document.getElementById("exam-timer").classList.add("text-danger");
         }
     }
 
-    const timerInterval = setInterval(updateTimer, 1000);
-    updateTimer();
+    // Initialize timer when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeTimer();
+
+        const examForm = document.getElementById('exam-form');
+        const submitButton = document.getElementById('submit-exam-btn');
+        if (examForm) {
+            examForm.addEventListener('submit', function() {
+                isSubmittingExam = true;
+                isExamEnded = true;
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Submitting...';
+                }
+            });
+        }
+    });
 
     // Navigator Highlighting
     function updateNav() {
         document.querySelectorAll('[data-question-id]').forEach(input => {
             const qId = input.dataset.questionId;
             const navBtn = document.getElementById('nav-q-' + qId);
-            
+
             if (input.type === 'radio') {
                 const checked = document.querySelector('input[name="question_'+qId+'"]:checked');
                 if (checked) navBtn.classList.add('answered');
@@ -203,7 +234,6 @@
 
     // Proctoring Logic - AUTO END EXAM ON TAB SWITCH
     let currentSessionId = null;
-    let isExamEnded = false;
     const overlay = document.getElementById('proctoring-overlay');
     const alertMsg = document.getElementById('alert-msg');
 
@@ -242,46 +272,34 @@
             <strong>The exam has been automatically terminated.</strong><br>
             Redirecting to results...
         `;
-        
+
         // Log detailed analysis to console for debugging
         console.log('Tab Switch Violation Analysis:', analysisData);
 
-        if (!currentSessionId) {
-            window.location.reload(); 
-            return;
-        }
+        // Always terminate the exam, even without session ID
+        // Submit empty form to terminate the exam properly
+        const form = document.getElementById('exam-form');
+        if (form) {
+            // Create hidden input for termination reason
+            const terminationInput = document.createElement('input');
+            terminationInput.type = 'hidden';
+            terminationInput.name = 'termination_reason';
+            terminationInput.value = reason;
+            form.appendChild(terminationInput);
 
-        // Enhanced backend call with comprehensive data
-        fetch(`/proctoring/decline/${currentSessionId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                violation_type: reason,
-                analysis_data: analysisData,
-                immediate_termination: true,
-                severity: 'critical'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Additional logging for analysis
-            console.log('Exam termination response:', data);
-            
+            // Submit the form to trigger proper termination
+            form.submit();
+        } else {
+            // Fallback: redirect to exam list
             setTimeout(() => {
-                window.location.href = data.redirect_url || '/exams/';
+                window.location.href = '/exams/';
             }, 3000);
-        }).catch(err => {
-            console.error('Failed to decline exam:', err);
-            window.location.reload();
-        });
+        }
     }
 
     // Helper functions for analysis
     function calculateExamDuration() {
-        const startTime = new Date('{{ submission.started_at|date:"Y-m-d H:i:s" }}');
+        const startTime = new Date('{{ submission.started_at|date:"c" }}');
         const now = new Date();
         const duration = Math.floor((now - startTime) / 1000 / 60); // in minutes
         return `${duration} minutes`;
@@ -290,11 +308,11 @@
     function countSubmittedAnswers() {
         const answeredQuestions = document.querySelectorAll('[data-question-id]');
         let count = 0;
-        
+
         answeredQuestions.forEach(question => {
             const questionId = question.getAttribute('data-question-id');
             let isAnswered = false;
-            
+
             if (question.type === 'radio') {
                 const radioInputs = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
                 isAnswered = radioInputs.length > 0;
@@ -305,13 +323,14 @@
                 const fileInput = document.querySelector(`input[name="file_${questionId}"]`);
                 isAnswered = fileInput && fileInput.files.length > 0;
             }
-            
+
             if (isAnswered) count++;
         });
-        
+
         return `${count}/${answeredQuestions.length}`;
     }
 
+    // Re-enabled proctoring detection for exam security
     // Detect Tab Switch / Window Blur - Enhanced
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
@@ -325,7 +344,7 @@
 
     // Additional tab switch detection
     window.addEventListener('beforeunload', function(e) {
-        if (!isExamEnded) {
+        if (!isExamEnded && !isSubmittingExam) {
             e.preventDefault();
             e.returnValue = '';
             endExamImmediately('Attempted to leave exam page');
@@ -365,7 +384,7 @@
 
     function logProctoringEvent(type, desc) {
         if (!currentSessionId) return;
-        
+
         fetch(`/proctoring/event/${currentSessionId}/`, {
             method: 'POST',
             headers: {
@@ -390,7 +409,7 @@
     // Disable Copy/Paste
     document.addEventListener('copy', e => e.preventDefault());
     document.addEventListener('paste', e => e.preventDefault());
-    
+
     // Add event listeners to check answers automatically
     document.addEventListener('DOMContentLoaded', function() {
         // Add listeners to all form inputs
@@ -399,53 +418,54 @@
             input.addEventListener('change', checkAllAnswers);
             input.addEventListener('input', checkAllAnswers);
         });
-        
+
         // Add listeners to file inputs
         const fileInputs = document.querySelectorAll('input[type="file"]');
         fileInputs.forEach(input => {
             input.addEventListener('change', checkAllAnswers);
         });
     });
-    
+
     // Function to check if all questions are answered
     function checkAllAnswers() {
-        const questions = document.querySelectorAll('[data-question-id]');
+        const questions = document.querySelectorAll('.question-block');
         let allAnswered = true;
         let unansweredQuestions = [];
-        
-        questions.forEach(question => {
-            const questionId = question.getAttribute('data-question-id');
+
+        questions.forEach(questionBlock => {
+            const questionId = questionBlock.id.replace('question-', '');
             let isAnswered = false;
-            
-            // Check different question types
-            if (question.type === 'radio') {
-                const radioInputs = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
-                isAnswered = radioInputs.length > 0;
-            } else if (question.type === 'textarea') {
-                const textArea = document.querySelector(`textarea[name="question_${questionId}"]`);
+
+            const radioInputs = questionBlock.querySelectorAll(`input[name="question_${questionId}"]`);
+            if (radioInputs.length > 0) {
+                isAnswered = questionBlock.querySelector(`input[name="question_${questionId}"]:checked`) !== null;
+            } else {
+                const textArea = questionBlock.querySelector(`textarea[name="question_${questionId}"]`);
+                const fileInput = questionBlock.querySelector(`input[name="file_${questionId}"]`);
                 isAnswered = textArea && textArea.value.trim() !== '';
-            } else if (question.type === 'file') {
-                const fileInput = document.querySelector(`input[name="file_${questionId}"]`);
-                isAnswered = fileInput && fileInput.files.length > 0;
+                isAnswered = isAnswered || (fileInput && fileInput.files.length > 0);
             }
-            
+
             if (!isAnswered) {
                 unansweredQuestions.push(questionId);
                 allAnswered = false;
             }
         });
-        
+
         return allAnswered;
+    }
+
+    function showSubmitModal() {
+        const modalElement = document.getElementById('submitModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+        return true;
     }
 
     // Function to submit exam form from modal
     function submitExamForm() {
-        // Check all answers before submission
-        if (!checkAllAnswers()) {
-            alert('Please answer all questions before submitting the exam.');
-            return false;
-        }
-        
+        // Allow partial submission - no need to answer all questions
+
         try {
             // Close the modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('submitModal'));
@@ -457,7 +477,7 @@
                 modalElement.style.display = 'none';
                 modalElement.classList.remove('show');
                 document.body.classList.remove('modal-open');
-                
+
                 // Remove backdrop
                 const backdrop = document.getElementById('modal-backdrop');
                 if (backdrop) {
@@ -467,8 +487,10 @@
         } catch (error) {
             console.log('Modal close error:', error);
         }
-        
+
         // Submit the form
+        isSubmittingExam = true;
+        isExamEnded = true;
         document.getElementById('exam-form').submit();
     }
 
